@@ -220,33 +220,42 @@ func _place_room(placement: PlacedRoom) -> void:
 					continue
 			
 			# For non-blocked cells or non-overlapping cells, mark as occupied
-			if cell.cell_type != MetaCell.CellType.BLOCKED:
-				occupied_cells[world_pos] = placement
+			# if cell.cell_type != MetaCell.CellType.BLOCKED:
+			occupied_cells[world_pos] = placement
 
 
 ## Merges two overlapping blocked cells
 ## If both have connections in opposite directions, removes those connections to create a solid wall
 func _merge_overlapping_cells(existing_cell: MetaCell, new_cell: MetaCell) -> void:
+	var potentialDoor := false
 	# Check for opposite-facing connections and remove them
 	# Horizontal connections (LEFT-RIGHT)
 	if existing_cell.connection_left and new_cell.connection_right:
 		existing_cell.connection_left = false
 		new_cell.connection_right = false
+		potentialDoor = true
 	if existing_cell.connection_right and new_cell.connection_left:
 		existing_cell.connection_right = false
 		new_cell.connection_left = false
+		potentialDoor = true
 	
 	# Vertical connections (UP-DOWN)
 	if existing_cell.connection_up and new_cell.connection_bottom:
 		existing_cell.connection_up = false
 		new_cell.connection_bottom = false
+		potentialDoor = true
 	if existing_cell.connection_bottom and new_cell.connection_up:
 		existing_cell.connection_bottom = false
 		new_cell.connection_up = false
+		potentialDoor = true
 	
 	# Ensure both cells remain blocked
-	existing_cell.cell_type = MetaCell.CellType.BLOCKED
-	new_cell.cell_type = MetaCell.CellType.BLOCKED
+	if potentialDoor:
+		existing_cell.cell_type = MetaCell.CellType.DOOR
+		new_cell.cell_type = MetaCell.CellType.DOOR
+	else:
+		existing_cell.cell_type = MetaCell.CellType.BLOCKED
+		new_cell.cell_type = MetaCell.CellType.BLOCKED
 
 
 ## Gets the offset vector for a direction

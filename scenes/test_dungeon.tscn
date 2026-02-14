@@ -13,7 +13,7 @@
 [node name="DungeonGenerator" type="Node" parent="." unique_id=1563054712]
 script = ExtResource("1")
 room_templates = Array[ExtResource("2_b1d4m")]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5")])
-target_room_count = 15
+target_room_count = 200
 generation_seed = 12345
 
 [node name="DungeonVisualizer" type="Node2D" parent="." unique_id=1074786944]

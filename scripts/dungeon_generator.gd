@@ -202,7 +202,7 @@ func _get_random_room_with_connections() -> MetaRoom:
 	var valid_rooms: Array[MetaRoom] = []
 	
 	for template in room_templates:
-		if template.has_connections():
+		if template.has_connection_points():
 			valid_rooms.append(template)
 	
 	if valid_rooms.is_empty():

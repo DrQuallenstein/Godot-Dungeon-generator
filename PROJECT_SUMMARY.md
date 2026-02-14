@@ -48,7 +48,7 @@ This is a **production-ready** dungeon generator system for Godot 4.6 featuring 
 - ✅ Export width, height, cells, room_name
 - ✅ get_cell(x, y) method
 - ✅ get_connection_points() method
-- ✅ has_connections() method
+- ✅ has_connection_points() method
 - ✅ validate() method
 - ✅ Deep copy functionality
 

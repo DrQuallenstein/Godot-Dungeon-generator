@@ -100,12 +100,12 @@ func get_connection_points() -> Array[ConnectionPoint]:
 
 
 ## Returns true if this room has at least one connection point
-func has_connections() -> bool:
+func has_connection_points() -> bool:
 	return not get_connection_points().is_empty()
 
 
 ## Creates a deep copy of this room
-func duplicate_deep() -> MetaRoom:
+func clone() -> MetaRoom:
 	var new_room = MetaRoom.new()
 	new_room.width = width
 	new_room.height = height
@@ -114,7 +114,7 @@ func duplicate_deep() -> MetaRoom:
 	
 	for cell in cells:
 		if cell != null:
-			new_room.cells.append(cell.duplicate_deep())
+			new_room.cells.append(cell.clone())
 		else:
 			new_room.cells.append(null)
 	

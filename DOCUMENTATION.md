@@ -48,7 +48,7 @@ Represents a single cell in a room.
 - `has_connection(direction: Direction) -> bool`: Check specific direction
 - `set_connection(direction: Direction, value: bool)`: Set connection state
 - `opposite_direction(direction: Direction) -> Direction`: Get opposite direction
-- `duplicate_deep() -> MetaCell`: Create a deep copy
+- `clone() -> MetaCell`: Create a deep copy
 
 **Usage Example:**
 ```gdscript
@@ -75,9 +75,9 @@ Represents a room template as a grid of MetaCells.
 - `get_cell(x: int, y: int) -> MetaCell`: Get cell at position
 - `set_cell(x: int, y: int, cell: MetaCell)`: Set cell at position
 - `get_connection_points() -> Array[ConnectionPoint]`: Get all edge connections
-- `has_connections() -> bool`: Check if room has any connections
+- `has_connection_points() -> bool`: Check if room has any connections
 - `validate() -> bool`: Validate room data consistency
-- `duplicate_deep() -> MetaRoom`: Create a deep copy
+- `clone() -> MetaRoom`: Create a deep copy
 
 **ConnectionPoint Inner Class:**
 - `x, y: int`: Local cell position

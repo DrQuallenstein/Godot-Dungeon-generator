@@ -16,7 +16,7 @@ enum Rotation {
 ## Rotates a room by the specified angle and returns a new rotated room
 static func rotate_room(room: MetaRoom, rotation: Rotation) -> MetaRoom:
 	if rotation == Rotation.DEG_0:
-		return room.duplicate_deep()
+		return room.clone()
 	
 	var rotated_room = MetaRoom.new()
 	rotated_room.room_name = room.room_name + "_rot" + str(rotation * 90)
@@ -41,7 +41,7 @@ static func rotate_room(room: MetaRoom, rotation: Rotation) -> MetaRoom:
 			if original_cell == null:
 				continue
 			
-			var rotated_cell = original_cell.duplicate_deep()
+			var rotated_cell = original_cell.clone()
 			_rotate_cell_connections(rotated_cell, rotation)
 			
 			var new_pos = _rotate_position(x, y, room.width, room.height, rotation)

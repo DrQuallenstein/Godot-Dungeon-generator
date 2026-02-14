@@ -60,7 +60,7 @@ A complete, tested, and documented dungeon generator system for Godot 4.6 using 
 - [x] Cells array (flat, row-major order)
 - [x] get_cell(x, y) method
 - [x] get_connection_points() method returning ConnectionPoint objects
-- [x] has_connections() validation
+- [x] has_connection_points() validation
 - [x] validate() method for data consistency
 - [x] Deep copy functionality
 - [x] All properties exported

@@ -82,7 +82,7 @@ static func opposite_direction(direction: Direction) -> Direction:
 
 
 ## Creates a deep copy of this cell
-func duplicate_deep() -> MetaCell:
+func clone() -> MetaCell:
 	var new_cell = MetaCell.new()
 	new_cell.cell_type = cell_type
 	new_cell.connection_up = connection_up

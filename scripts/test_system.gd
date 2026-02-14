@@ -56,9 +56,9 @@ func test_meta_cell() -> bool:
 		passed = false
 	
 	# Test duplicate
-	var cell_copy = cell.duplicate_deep()
+	var cell_copy = cell.clone()
 	if cell_copy.connection_up != cell.connection_up or cell_copy.cell_type != cell.cell_type:
-		print("  ✗ Failed: duplicate_deep()")
+		print("  ✗ Failed: clone()")
 		passed = false
 	
 	if passed:
@@ -102,8 +102,8 @@ func test_meta_room() -> bool:
 		print("  ✗ Failed: get_connection_points() should not be empty")
 		passed = false
 	
-	if not room.has_connections():
-		print("  ✗ Failed: has_connections()")
+	if not room.has_connection_points():
+		print("  ✗ Failed: has_connection_points()")
 		passed = false
 	
 	# Test validation
@@ -112,9 +112,9 @@ func test_meta_room() -> bool:
 		passed = false
 	
 	# Test duplicate
-	var room_copy = room.duplicate_deep()
+	var room_copy = room.clone()
 	if room_copy.width != room.width or room_copy.height != room.height:
-		print("  ✗ Failed: duplicate_deep()")
+		print("  ✗ Failed: clone()")
 		passed = false
 	
 	if passed:
@@ -212,7 +212,7 @@ func test_room_resources() -> bool:
 			passed = false
 			continue
 		
-		if not room.has_connections():
+		if not room.has_connection_points():
 			print("  ✗ Failed: Room has no connections: ", path)
 			passed = false
 			continue

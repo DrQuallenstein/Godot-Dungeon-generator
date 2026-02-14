@@ -18,11 +18,20 @@ var resize_button: Button
 var cell_type_buttons: Dictionary = {}
 var connection_buttons: Dictionary = {}
 
+var _initialized: bool = false
 
-func _ready() -> void:
-	if not meta_room:
+
+## Initialize the editor with the MetaRoom resource
+## This must be called after meta_room is set
+func initialize() -> void:
+	if _initialized:
 		return
 	
+	if not meta_room:
+		push_error("MetaRoom editor: Cannot initialize without meta_room")
+		return
+	
+	_initialized = true
 	_setup_ui()
 	_refresh_grid()
 
@@ -153,6 +162,9 @@ func _setup_ui() -> void:
 	# Grid container
 	grid_container = GridContainer.new()
 	grid_container.columns = meta_room.width
+	# Ensure grid container has proper sizing
+	grid_container.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	grid_container.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	add_child(grid_container)
 
 
@@ -173,6 +185,9 @@ func _refresh_grid() -> void:
 		for x in range(meta_room.width):
 			var btn = Button.new()
 			btn.custom_minimum_size = Vector2(60, 60)
+			# Ensure buttons expand to fill space
+			btn.size_flags_horizontal = Control.SIZE_FILL
+			btn.size_flags_vertical = Control.SIZE_FILL
 			btn.pressed.connect(_on_cell_clicked.bind(x, y))
 			
 			var cell = meta_room.get_cell(x, y)

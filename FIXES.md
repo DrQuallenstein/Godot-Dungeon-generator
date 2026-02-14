@@ -86,3 +86,86 @@ If you have existing code using this dungeon generator, you'll need to update:
 5. Run automated tests: `scenes/test_system.tscn`
 
 All errors have been resolved and the project is now fully compatible with Godot 4.6.
+
+---
+
+## Additional Fix: ExtResource Format in .tres Files
+
+### Issue
+After fixing the method name conflicts, additional errors appeared:
+- `Invalid operands to operator *, String and int.`
+- `Invalid operands to operator +, String and Nil.`
+
+These errors occurred on lines 7, 9, 19, and 24 of the resource files.
+
+### Root Cause
+The ExtResource format in .tres files was using old numeric IDs like `ExtResource("1")` and `ExtResource("2")`, which caused parsing issues in Godot 4.6 where the IDs were being treated as strings instead of proper resource references.
+
+### Solution
+Updated all .tres files to use proper Godot 4.6 format:
+- Added UIDs to resource headers: `uid="uid://cross_room"`
+- Changed ExtResource IDs from numeric to descriptive: `id="1_meta_room"`, `id="2_meta_cell"`
+- Changed SubResource IDs to descriptive: `id="MetaCell_1"` through `id="MetaCell_9"`
+- Updated all ExtResource references: `ExtResource("1_meta_room")`, `ExtResource("2_meta_cell")`
+- Updated all SubResource references: `SubResource("MetaCell_1")`, etc.
+
+### Files Modified
+9. **resources/rooms/cross_room.tres**
+   - Added UID to header
+   - Updated ExtResource IDs and references
+   - Updated SubResource IDs and references
+
+10. **resources/rooms/l_corridor.tres**
+   - Added UID to header
+   - Updated ExtResource IDs and references
+   - Updated SubResource IDs and references
+
+11. **resources/rooms/straight_corridor.tres**
+   - Added UID to header
+   - Updated ExtResource IDs and references
+   - Updated SubResource IDs and references
+
+12. **resources/rooms/t_room.tres**
+   - Added UID to header
+   - Updated ExtResource IDs and references
+   - Updated SubResource IDs and references
+
+### Example
+
+**Before (causing errors):**
+```tres
+[gd_resource type="Resource" script_class="MetaRoom" load_steps=12 format=3]
+
+[ext_resource type="Script" path="res://scripts/meta_room.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/meta_cell.gd" id="2"]
+
+[sub_resource type="Resource" id="1"]
+script = ExtResource("2")
+cell_type = 0
+```
+
+**After (proper Godot 4.6 format):**
+```tres
+[gd_resource type="Resource" script_class="MetaRoom" load_steps=12 format=3 uid="uid://cross_room"]
+
+[ext_resource type="Script" path="res://scripts/meta_room.gd" id="1_meta_room"]
+[ext_resource type="Script" path="res://scripts/meta_cell.gd" id="2_meta_cell"]
+
+[sub_resource type="Resource" id="MetaCell_1"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+```
+
+### Result
+All resource files now load without parsing errors. The string/int operation errors are completely resolved.
+
+---
+
+## Complete Verification
+
+All errors have been resolved. The project now:
+- ✅ Loads without script errors in Godot 4.6
+- ✅ Loads all resource files without parsing errors
+- ✅ Passes all unit tests
+- ✅ Generates dungeons correctly
+- ✅ Uses proper Godot 4.6 resource format

@@ -38,6 +38,7 @@ func _on_generation_complete(success: bool, room_count: int) -> void:
 ```gdscript
 func _on_generation_complete(success: bool, room_count: int, cell_count: int) -> void:
 	print("Dungeon generation complete. Success: ", success, ", Rooms: ", room_count, ", Cells: ", cell_count)
+	cached_cell_count = cell_count
 	queue_redraw()
 ```
 
@@ -56,17 +57,17 @@ var stats = [
 
 **After:**
 ```gdscript
-var cell_count = 0
-for placement in generator.placed_rooms:
-	for y in range(placement.room.height):
-		for x in range(placement.room.width):
-			var cell = placement.room.get_cell(x, y)
-			if cell != null:
-				cell_count += 1
+# Added instance variable to cache cell count
+var cached_cell_count: int = 0
 
+# Updated signal handler to cache value
+func _on_generation_complete(success: bool, room_count: int, cell_count: int) -> void:
+	cached_cell_count = cell_count
+
+# Use cached value in statistics (no recalculation needed)
 var stats = [
 	"Rooms: %d" % generator.placed_rooms.size(),
-	"Cells: %d / %d" % [cell_count, generator.target_meta_cell_count],
+	"Cells: %d / %d" % [cached_cell_count, generator.target_meta_cell_count],
 	"Bounds: %d x %d" % [bounds.size.x, bounds.size.y],
 	"Seed: %d" % generator.generation_seed
 ]
@@ -96,9 +97,15 @@ var stats = [
 
 **Files Modified:**
 - `scripts/dungeon_visualizer.gd`
+  - Added `cached_cell_count` instance variable (line 11)
   - Updated `_on_generation_complete()` to accept 3 parameters
-  - Updated `_draw_statistics()` to display cell count instead of room count target
-  - Calculates actual cell count for display
+  - Cache cell count value from signal (line 40)
+  - Updated `_draw_statistics()` to use cached value instead of recalculating
+
+**Performance Optimization:**
+- Eliminated nested loops that recalculated cell count on every draw call
+- Cell count now calculated once during generation and cached
+- Reuses cached value for all draw calls
 
 **Breaking Changes:** None - this is a bug fix
 

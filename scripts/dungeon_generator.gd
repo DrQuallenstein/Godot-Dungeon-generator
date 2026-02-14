@@ -10,11 +10,13 @@ class PlacedRoom:
 	var room: MetaRoom
 	var position: Vector2i  # World position (in cells)
 	var rotation: RoomRotator.Rotation
+	var original_template: MetaRoom  # Reference to the original template before cloning/rotation
 	
-	func _init(p_room: MetaRoom, p_position: Vector2i, p_rotation: RoomRotator.Rotation):
+	func _init(p_room: MetaRoom, p_position: Vector2i, p_rotation: RoomRotator.Rotation, p_original_template: MetaRoom):
 		room = p_room
 		position = p_position
 		rotation = p_rotation
+		original_template = p_original_template
 	
 	## Gets the world position of a cell in this room
 	func get_cell_world_pos(local_x: int, local_y: int) -> Vector2i:
@@ -127,7 +129,7 @@ func generate() -> bool:
 	
 	# Place the first room at origin (clone it to avoid modifying the template)
 	var first_room_clone = start_room.clone()
-	var first_placement = PlacedRoom.new(first_room_clone, Vector2i.ZERO, RoomRotator.Rotation.DEG_0)
+	var first_placement = PlacedRoom.new(first_room_clone, Vector2i.ZERO, RoomRotator.Rotation.DEG_0, start_room)
 	_place_room(first_placement)
 	
 	# Initialize walkers at the first room
@@ -223,7 +225,7 @@ func _try_place_next_room(current_placement: PlacedRoom) -> PlacedRoom:
 			
 			for rotation in rotations:
 				var rotated_room = RoomRotator.rotate_room(template, rotation)
-				var placement = _try_connect_room(current_placement, conn_point, rotated_room, rotation)
+				var placement = _try_connect_room(current_placement, conn_point, rotated_room, rotation, template)
 				
 				if placement != null:
 					return placement
@@ -241,11 +243,16 @@ func _walker_try_place_room(walker: Walker) -> bool:
 	if open_connections.is_empty():
 		return false
 	
-	# Get available (unused) room templates
+	# Get available (unused) room templates, excluding the walker's current room template
 	var available_templates: Array[MetaRoom] = []
 	for template in room_templates:
-		if not used_room_templates.has(template):
-			available_templates.append(template)
+		# Skip if template already used globally
+		if used_room_templates.has(template):
+			continue
+		# Skip if template is the same as walker's current room (prevent consecutive same template)
+		if template == walker.current_room.original_template:
+			continue
+		available_templates.append(template)
 	
 	# If all templates are used, can't place any more rooms
 	if available_templates.is_empty():
@@ -281,7 +288,7 @@ func _walker_try_place_room(walker: Walker) -> bool:
 			
 			for rotation in rotations:
 				var rotated_room = RoomRotator.rotate_room(template, rotation)
-				var placement = _try_connect_room(walker.current_room, conn_point, rotated_room, rotation)
+				var placement = _try_connect_room(walker.current_room, conn_point, rotated_room, rotation, template)
 				
 				if placement != null:
 					# Mark this template as used
@@ -400,7 +407,8 @@ func _try_connect_room(
 	from_placement: PlacedRoom,
 	from_connection: MetaRoom.ConnectionPoint,
 	to_room: MetaRoom,
-	rotation: RoomRotator.Rotation
+	rotation: RoomRotator.Rotation,
+	original_template: MetaRoom
 ) -> PlacedRoom:
 	# Find matching connection points in the target room
 	var to_connections = to_room.get_connection_points()
@@ -420,7 +428,7 @@ func _try_connect_room(
 		
 		# Check if room can be placed with allowed overlaps
 		if _can_place_room(to_room, target_pos):
-			return PlacedRoom.new(to_room, target_pos, rotation)
+			return PlacedRoom.new(to_room, target_pos, rotation, original_template)
 	
 	return null
 

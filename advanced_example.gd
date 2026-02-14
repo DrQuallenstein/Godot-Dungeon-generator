@@ -82,24 +82,22 @@ func _create_corridor(width: int, height: int, name: String, weight: float) -> M
 	return corridor
 
 func _create_t_junction() -> MetaRoom:
-	# T-shaped corridor junction
+	# T-shaped corridor junction (3 exits)
 	var t_room = MetaRoom.new("TJunction", 3, 3)
 	t_room.weight = 1.0
 	
 	# Pattern:
 	#  C
 	# CCC
-	#  C
 	t_room.set_tile(1, 0, corridor_type)
 	t_room.set_tile(0, 1, corridor_type)
 	t_room.set_tile(1, 1, corridor_type)
 	t_room.set_tile(2, 1, corridor_type)
-	t_room.set_tile(1, 2, corridor_type)
 	
 	return t_room
 
 func _create_cross_junction() -> MetaRoom:
-	# Cross-shaped corridor junction
+	# Cross-shaped corridor junction (4 exits)
 	var cross = MetaRoom.new("CrossJunction", 3, 3)
 	cross.weight = 0.8
 	

@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3 uid="uid://cwjnxy2hq0vkd"]
 
-[ext_resource type="Script" path="res://visual_example.gd" id="1_d2vjx"]
-[ext_resource type="Script" path="res://dungeon_generator.gd" id="2_7r3qk"]
+[ext_resource type="Script" path="res://examples/visual_example.gd" id="1_d2vjx"]
+[ext_resource type="Script" path="res://scripts/dungeon_generator.gd" id="2_7r3qk"]
 
 [node name="VisualExample" type="Node2D"]
 script = ExtResource("1_d2vjx")

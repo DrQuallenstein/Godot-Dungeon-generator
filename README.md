@@ -1,204 +1,146 @@
 # Godot Dungeon Generator
 
-Ein flexibler Dungeon-Generator für Roguelike-Spiele in Godot 4.x mit GDScript. Das System verwendet Meta-Prefabs und einen Random Room Walker Algorithmus.
+A flexible dungeon generator for Roguelike games in Godot 4.x with GDScript. Uses Meta-Prefabs and a Random Room Walker algorithm.
 
-## Features
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Godot](https://img.shields.io/badge/godot-4.3+-blue.svg)
 
-- **Meta-Prefab System**: Definiere wiederverwendbare Raum-Templates mit Platzierungsbedingungen
-- **Rotation Support**: Automatische Rotation von Prefabs (90°, 180°, 270°)
-- **Flexible Bedingungen**: Definiere welche Tile-Typen um ein Prefab herum sein müssen
-- **Random Room Walker**: Intelligenter Algorithmus der Räume zufällig platziert
-- **Konfigurierbar**: Kontrolle über Grid-Größe, Mindestanzahl an Tiles, etc.
+## 🎮 Quick Start
 
-## Architektur
+1. Open the project in Godot 4.3 or later
+2. Press **F5** to run the main scene
+3. Use **Mouse Wheel** to zoom, **Right Click + Drag** to pan
+4. Press **R** to regenerate the dungeon
 
-### Hauptkomponenten
+## 📁 Project Structure
 
-1. **MetaTileType** (`meta_tile_type.gd`)
-   - Definiert einen Typ von Meta-Tile (z.B. Wand, Korridor, Raum, Tür)
-   - Wird für Matching-Bedingungen verwendet
+```
+Godot-Dungeon-generator/
+├── scripts/              # Core GDScript files
+│   ├── meta_tile_type.gd    # Tile type definitions
+│   ├── meta_prefab.gd       # Prefab with conditions
+│   ├── meta_room.gd         # Room templates
+│   └── dungeon_generator.gd # Main generator
+├── scenes/               # Main scenes
+│   ├── dungeon_viewer.tscn  # Main visual viewer (with pan/zoom)
+│   └── dungeon_viewer.gd    # Viewer script
+├── examples/             # Example scenes
+│   ├── example_usage.*      # Basic usage
+│   ├── advanced_example.*   # Advanced features
+│   └── visual_example.*     # Visual demo
+├── resources/            # Resource files
+├── docs/                 # Documentation
+│   ├── README.md            # Detailed guide (German)
+│   ├── USAGE.md             # Usage examples
+│   ├── API.md               # API reference
+│   └── IMPLEMENTATION_COMPLETE.md
+├── project.godot         # Godot project file
+├── icon.svg              # Project icon
+└── LICENSE               # MIT License
+```
 
-2. **MetaPrefab** (`meta_prefab.gd`)
-   - Stellt ein Prefab dar, das auf dem Meta-Grid platziert werden kann
-   - Unterstützt:
-     - Variable Größe (1x1, 2x2, etc.)
-     - Bedingungen für benachbarte Tiles
-     - Rotation (90°, 180°, 270°)
-   - Prüft automatisch ob Platzierung möglich ist
+## ✨ Features
 
-3. **MetaRoom** (`meta_room.gd`)
-   - Repräsentiert ein Raum-Template
-   - Enthält ein Layout-Grid aus MetaTileTypes
-   - Kann auf das Meta-Grid platziert werden
-   - Unterstützt Gewichtung für zufällige Auswahl
+- **Meta-Prefab System**: Define reusable room templates with placement conditions
+- **Rotation Support**: Automatic rotation of prefabs (90°, 180°, 270°)
+- **Flexible Conditions**: Define which tile types must surround a prefab
+- **Random Room Walker**: Intelligent algorithm for room placement
+- **Visual Display**: See your dungeon with pan and zoom controls
+- **Configurable**: Control grid size, minimum tile count, etc.
 
-4. **DungeonGenerator** (`dungeon_generator.gd`)
-   - Hauptgenerator mit Random Room Walker Algorithmus
-   - Features:
-     - Konfigurierbare Grid-Größe
-     - Minimum Anzahl von Grid-Elementen
-     - Retry-Logik: 10 Versuche, dann zufälligen existierenden Raum wählen
-     - Signals für Erfolg/Fehler
+## 🎯 Controls
 
-## Verwendung
+| Action | Input |
+|--------|-------|
+| **Zoom In/Out** | Mouse Wheel |
+| **Pan Camera** | Right Click + Drag or Arrow Keys |
+| **Regenerate** | R Key |
 
-### Basis-Setup
+## 📚 Documentation
+
+- **[Full Documentation](docs/README.md)** - Complete guide in German
+- **[Usage Guide](docs/USAGE.md)** - Detailed usage examples
+- **[API Reference](docs/API.md)** - API documentation
+
+## 🏗️ Core Components
+
+### 1. MetaTileType
+Defines a type of meta tile (wall, corridor, room, door).
+
+### 2. MetaPrefab
+Represents a prefab that can be placed on the meta grid with:
+- Variable size (1x1, 2x2, etc.)
+- Neighbor type conditions
+- Rotation support (90°, 180°, 270°)
+
+### 3. MetaRoom
+Room template with:
+- Grid layout of MetaTileTypes
+- Weighted random selection
+- Placement validation
+
+### 4. DungeonGenerator
+Main generator using Random Room Walker algorithm:
+- Configurable grid size
+- Minimum grid element requirement
+- Retry logic: 10 attempts, then pick random existing room
+- Signals for generation events
+
+## 🚀 Usage Example
 
 ```gdscript
-extends Node
+extends Node2D
 
 @onready var generator: DungeonGenerator = $DungeonGenerator
 
 func _ready():
-    # Tile-Typen erstellen
-    var wall_type = MetaTileType.new("wall", "Eine feste Wand")
-    var corridor_type = MetaTileType.new("corridor", "Ein Korridor")
-    var room_type = MetaTileType.new("room", "Ein Raumboden")
+    # Create tile types
+    var wall = MetaTileType.new("wall", "Solid wall")
+    var room = MetaTileType.new("room", "Room floor")
     
-    # Räume erstellen
-    var rooms = []
-    
-    # Kleiner Raum (3x3)
+    # Create a room
     var small_room = MetaRoom.new("SmallRoom", 3, 3)
-    for y in range(3):
-        for x in range(3):
-            if x == 0 or x == 2 or y == 0 or y == 2:
-                small_room.set_tile(x, y, wall_type)
-            else:
-                small_room.set_tile(x, y, room_type)
-    rooms.append(small_room)
+    # ... configure room layout
     
-    # Generator konfigurieren
-    generator.available_rooms = rooms
+    # Setup generator
+    generator.available_rooms = [small_room]
     generator.grid_width = 30
     generator.grid_height = 30
-    generator.min_grid_elements = 80
+    generator.min_grid_elements = 100
     
-    # Signals verbinden
-    generator.generation_complete.connect(_on_generation_complete)
-    
-    # Generierung starten
+    # Generate
+    generator.generation_complete.connect(_on_complete)
     generator.generate_dungeon()
 
-func _on_generation_complete(grid: Array):
-    print("Dungeon generiert!")
-    var stats = generator.get_stats()
-    print("Statistik: ", stats)
+func _on_complete(grid: Array):
+    print("Dungeon generated!")
+    # Use the grid...
 ```
 
-### Meta-Prefab mit Bedingungen
+## 🔧 Configuration
+
+Key properties in DungeonGenerator:
 
 ```gdscript
-# Erstelle einen "Wand mit Tür" Prefab
-var wall_door = MetaPrefab.new("WallDoor", 1, 1)
-wall_door.tile_type = door_type
-
-# Bedingungen setzen:
-# - Oben: Korridor
-# - Unten: Korridor
-# - Mitte: Wand
-wall_door.set_neighbor_condition(MetaPrefab.Direction.NORTH, corridor_type)
-wall_door.set_neighbor_condition(MetaPrefab.Direction.SOUTH, corridor_type)
-
-# Rotation erlauben
-wall_door.allow_rotation = true
-
-# Prüfen ob Platzierung möglich
-if wall_door.can_place_at(grid, grid_width, grid_height, x, y, 90):
-    # Kann mit 90° Rotation platziert werden
-    pass
+@export var grid_width: int = 20              # Grid width
+@export var grid_height: int = 20             # Grid height
+@export var min_grid_elements: int = 50       # Minimum filled tiles
+@export var max_attempts_per_placement: int = 10  # Retry attempts
+@export var available_rooms: Array[MetaRoom] = []  # Room templates
 ```
 
-### Raum-Templates mit Gewichtung
+## 📄 License
 
-```gdscript
-# Raum mit höherer Wahrscheinlichkeit
-var common_room = MetaRoom.new("CommonRoom", 3, 3)
-common_room.weight = 3.0  # 3x wahrscheinlicher als Gewicht 1.0
+MIT License - see [LICENSE](LICENSE) file for details.
 
-# Seltener Raum
-var rare_room = MetaRoom.new("RareRoom", 5, 5)
-rare_room.weight = 0.5  # Halb so wahrscheinlich
+## 🤝 Contributing
 
-# Minimum/Maximum Anzahl
-common_room.min_count = 2  # Mindestens 2 in jedem Dungeon
-rare_room.max_count = 1    # Maximal 1 in jedem Dungeon
-```
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-## Algorithmus: Random Room Walker
+## 📧 Support
 
-Der Generator verwendet einen Walker-basierten Ansatz:
+For issues and questions, please use the GitHub issue tracker.
 
-1. **Initialisierung**: Walker startet in der Mitte des Grids
-2. **Raum-Platzierung**: 
-   - Wähle zufälligen Raum basierend auf Gewichtung
-   - Versuche Platzierung in der Nähe des Walkers
-   - Bis zu 10 Versuche pro Position
-3. **Bei Fehler**: 
-   - Nach 10 erfolglosen Versuchen: Wähle zufälligen bereits platzierten Raum
-   - Bewege Walker dorthin und versuche erneut
-4. **Abschluss**: 
-   - Generierung läuft bis `min_grid_elements` erreicht ist
-   - Oder maximale Iterationen überschritten werden
+---
 
-## Konfiguration
-
-### DungeonGenerator Properties
-
-```gdscript
-@export var grid_width: int = 20              # Breite des Meta-Grids
-@export var grid_height: int = 20             # Höhe des Meta-Grids
-@export var min_grid_elements: int = 50       # Minimum gefüllte Tiles
-@export var max_attempts_per_placement: int = 10  # Versuche pro Raum
-@export var available_rooms: Array[MetaRoom] = [] # Verfügbare Räume
-```
-
-## Beispiel
-
-Ein vollständiges Beispiel findet sich in:
-- `example_usage.gd` - Script mit Beispiel-Setup
-- `example_usage.tscn` - Scene zum Testen
-
-Um das Beispiel zu starten:
-1. Öffne das Projekt in Godot 4.x
-2. Öffne `example_usage.tscn`
-3. Drücke F6 zum Starten der Scene
-4. Prüfe die Konsole für Debug-Ausgabe
-
-## Erweiterte Funktionen
-
-### Custom Tile Types
-
-```gdscript
-class_name MyCustomTileType
-extends MetaTileType
-
-var special_property: String = ""
-
-func _init(name: String, desc: String, prop: String):
-    super._init(name, desc)
-    special_property = prop
-```
-
-### Grid Visualisierung
-
-```gdscript
-func visualize_grid(grid: Array):
-    for y in range(len(grid)):
-        for x in range(len(grid[0])):
-            var tile = grid[y][x]
-            if tile != null:
-                # Erstelle visuelle Repräsentation
-                var sprite = Sprite2D.new()
-                sprite.position = Vector2(x * 32, y * 32)
-                # ... weitere Konfiguration
-                add_child(sprite)
-```
-
-## Lizenz
-
-Dieses Projekt ist Open Source. Siehe LICENSE Datei für Details.
-
-## Beiträge
-
-Beiträge sind willkommen! Bitte erstelle einen Pull Request oder öffne ein Issue.
+**Made with ❤️ for the Godot community**

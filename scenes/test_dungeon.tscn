@@ -7,6 +7,7 @@
 [ext_resource type="Resource" uid="uid://b7wy1g8ynxhyy" path="res://resources/rooms/straight_corridor.tres" id="4"]
 [ext_resource type="Resource" uid="uid://cjpb1o6iycdxp" path="res://resources/rooms/t_room.tres" id="5"]
 [ext_resource type="Script" uid="uid://bpv3x8un1m5hh" path="res://scripts/dungeon_visualizer.gd" id="6"]
+[ext_resource type="Script" path="res://scripts/camera_controller.gd" id="7"]
 
 [node name="TestDungeon" type="Node2D" unique_id=1865828730]
 
@@ -21,6 +22,7 @@ script = ExtResource("6")
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=1048482732]
 position = Vector2(640, 360)
+script = ExtResource("7")
 
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=1667319371]
 
@@ -35,5 +37,13 @@ theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 1
 theme_override_font_sizes/font_size = 14
 text = "Dungeon Generator Test Scene
-Press R to regenerate
-Press S to generate with new random seed"
+
+Controls:
+R - Regenerate dungeon (same seed)
+S - Generate with new random seed
+
+Camera Controls:
+Mouse Wheel - Zoom in/out
+Middle Mouse / Right Mouse - Pan/drag view
++/- Keys - Zoom in/out
+0 Key - Reset camera"

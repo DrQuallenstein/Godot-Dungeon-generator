@@ -12,6 +12,7 @@ A robust, room-based dungeon generator for Godot 4.6 using a random walk algorit
 - **Connection Merging**: Opposing connections create solid walls when rooms overlap
 - **Configurable**: Easy to add new room templates and adjust generation parameters
 - **Visual Debug**: Built-in visualizer to see generated dungeons
+- **Camera Controls**: Pan and zoom to explore dungeons at any scale
 
 ## Project Structure
 
@@ -28,7 +29,8 @@ A robust, room-based dungeon generator for Godot 4.6 using a random walk algorit
 │   ├── meta_room.gd           # Room template (grid of cells)
 │   ├── room_rotator.gd        # Static methods for rotating rooms
 │   ├── dungeon_generator.gd   # Main generator using random walk
-│   └── dungeon_visualizer.gd  # Visual debug renderer
+│   ├── dungeon_visualizer.gd  # Visual debug renderer
+│   └── camera_controller.gd   # Pan and zoom camera controls
 ├── resources/
 │   └── rooms/
 │       ├── cross_room.tres           # 4-way connection room
@@ -105,8 +107,15 @@ Key features:
 
 1. Open the project in Godot 4.6
 2. Press F5 to run the test scene
-3. Press R to regenerate with the same seed
-4. Press S to generate with a new random seed
+3. Use camera controls to explore:
+   - **Mouse Wheel**: Zoom in/out
+   - **Middle/Right Mouse**: Pan/drag the view
+   - **+/- Keys**: Zoom in/out
+   - **0 Key**: Reset camera
+4. Press R to regenerate with the same seed
+5. Press S to generate with a new random seed
+
+See `CAMERA_CONTROLS.md` for detailed camera documentation.
 
 ### Creating Custom Room Templates
 

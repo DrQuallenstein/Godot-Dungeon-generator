@@ -115,10 +115,7 @@ func _draw_statistics(bounds: Rect2i) -> void:
 	var stats = [
 		"Rooms: %d / %d" % [generator.placed_rooms.size(), generator.target_room_count],
 		"Bounds: %d x %d" % [bounds.size.x, bounds.size.y],
-		"Seed: %d" % generator.generation_seed,
-		"",
-		"Press R to regenerate",
-		"Press S to generate with new seed"
+		"Seed: %d" % generator.generation_seed
 	]
 	
 	for i in range(stats.size()):

@@ -112,6 +112,8 @@ Key features:
    - **Middle/Right Mouse**: Pan/drag the view
    - **+/- Keys**: Zoom in/out
    - **0 Key**: Reset camera
+   - **Touchpad Pinch** (MacBook): Zoom in/out
+   - **Touchpad Two-Finger Pan** (MacBook): Pan/scroll the view
 4. Press R to regenerate with the same seed
 5. Press S to generate with a new random seed
 

@@ -125,6 +125,7 @@ func _try_place_next_room(current_placement: PlacedRoom) -> PlacedRoom:
 
 
 ## Tries to connect a room at the specified connection point
+## With blocked cell overlap, rooms share their edge cells
 func _try_connect_room(
 	from_placement: PlacedRoom,
 	from_connection: MetaRoom.ConnectionPoint,
@@ -143,10 +144,11 @@ func _try_connect_room(
 			continue
 		
 		# Calculate target room position
-		var offset = _get_direction_offset(from_connection.direction)
-		var target_pos = from_world_pos + offset - Vector2i(to_conn.x, to_conn.y)
+		# The connection cells should overlap (be at the same position)
+		# So we place the room such that to_conn cell aligns with from_connection cell
+		var target_pos = from_world_pos - Vector2i(to_conn.x, to_conn.y)
 		
-		# Check if room can be placed without overlap
+		# Check if room can be placed with allowed overlaps
 		if _can_place_room(to_room, target_pos):
 			return PlacedRoom.new(to_room, target_pos, rotation)
 	
@@ -154,33 +156,97 @@ func _try_connect_room(
 
 
 ## Checks if a room can be placed at the given position without overlapping
+## Allows BLOCKED cells to overlap with other BLOCKED cells
 func _can_place_room(room: MetaRoom, position: Vector2i) -> bool:
 	for y in range(room.height):
 		for x in range(room.width):
 			var cell = room.get_cell(x, y)
-			if cell == null or cell.cell_type == MetaCell.CellType.BLOCKED:
+			if cell == null:
 				continue
 			
 			var world_pos = position + Vector2i(x, y)
+			
+			# If this cell is blocked, it can overlap with other blocked cells
+			if cell.cell_type == MetaCell.CellType.BLOCKED:
+				if occupied_cells.has(world_pos):
+					var existing_placement = occupied_cells[world_pos]
+					var existing_cell = _get_cell_at_world_pos(existing_placement, world_pos)
+					# Only allow overlap if existing cell is also BLOCKED
+					if existing_cell == null or existing_cell.cell_type != MetaCell.CellType.BLOCKED:
+						return false
+				# Blocked can overlap with blocked, so continue checking other cells
+				continue
+			
+			# Non-blocked cells cannot overlap with anything
 			if occupied_cells.has(world_pos):
 				return false
 	
 	return true
 
 
+## Helper function to get the cell at a world position from a placed room
+func _get_cell_at_world_pos(placement: PlacedRoom, world_pos: Vector2i) -> MetaCell:
+	var local_pos = world_pos - placement.position
+	if local_pos.x < 0 or local_pos.x >= placement.room.width:
+		return null
+	if local_pos.y < 0 or local_pos.y >= placement.room.height:
+		return null
+	return placement.room.get_cell(local_pos.x, local_pos.y)
+
+
 ## Places a room and marks its cells as occupied
+## Handles merging of overlapping blocked cells with opposite connections
 func _place_room(placement: PlacedRoom) -> void:
 	placed_rooms.append(placement)
 	
-	# Mark cells as occupied
+	# Mark cells as occupied and handle overlaps
 	for y in range(placement.room.height):
 		for x in range(placement.room.width):
 			var cell = placement.room.get_cell(x, y)
-			if cell == null or cell.cell_type == MetaCell.CellType.BLOCKED:
+			if cell == null:
 				continue
 			
 			var world_pos = placement.get_cell_world_pos(x, y)
-			occupied_cells[world_pos] = placement
+			
+			# Check if there's already a cell at this position (overlap case)
+			if occupied_cells.has(world_pos):
+				var existing_placement = occupied_cells[world_pos]
+				var existing_cell = _get_cell_at_world_pos(existing_placement, world_pos)
+				
+				# Merge overlapping blocked cells
+				if cell.cell_type == MetaCell.CellType.BLOCKED and existing_cell != null and existing_cell.cell_type == MetaCell.CellType.BLOCKED:
+					_merge_overlapping_cells(existing_cell, cell)
+					# Keep the existing placement in occupied_cells (it's already there)
+					continue
+			
+			# For non-blocked cells or non-overlapping cells, mark as occupied
+			if cell.cell_type != MetaCell.CellType.BLOCKED:
+				occupied_cells[world_pos] = placement
+
+
+## Merges two overlapping blocked cells
+## If both have connections in opposite directions, removes those connections to create a solid wall
+func _merge_overlapping_cells(existing_cell: MetaCell, new_cell: MetaCell) -> void:
+	# Check for opposite-facing connections and remove them
+	# Horizontal connections (LEFT-RIGHT)
+	if existing_cell.connection_left and new_cell.connection_right:
+		existing_cell.connection_left = false
+		new_cell.connection_right = false
+	if existing_cell.connection_right and new_cell.connection_left:
+		existing_cell.connection_right = false
+		new_cell.connection_left = false
+	
+	# Vertical connections (UP-DOWN)
+	if existing_cell.connection_up and new_cell.connection_bottom:
+		existing_cell.connection_up = false
+		new_cell.connection_bottom = false
+	if existing_cell.connection_bottom and new_cell.connection_up:
+		existing_cell.connection_bottom = false
+		new_cell.connection_up = false
+	
+	# Ensure both cells remain blocked
+	existing_cell.cell_type = MetaCell.CellType.BLOCKED
+	new_cell.cell_type = MetaCell.CellType.BLOCKED
 
 
 ## Gets the offset vector for a direction

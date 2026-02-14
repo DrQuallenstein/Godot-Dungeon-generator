@@ -40,9 +40,16 @@ theme_override_constants/shadow_offset_y = 1
 theme_override_font_sizes/font_size = 14
 text = "Dungeon Generator Test Scene
 
-Controls:
+Generation Controls:
 R - Regenerate dungeon (same seed)
 S - Generate with new random seed
+
+Visualization Controls:
+W - Toggle walker visualization
+P - Toggle path visualization
+V - Toggle step-by-step mode
+C - Increase compactness bias (+0.1)
+X - Decrease compactness bias (-0.1)
 
 Camera Controls:
 Mouse Wheel - Zoom in/out

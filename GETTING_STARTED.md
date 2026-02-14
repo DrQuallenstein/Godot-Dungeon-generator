@@ -11,13 +11,24 @@ godot project.godot
 Add Project > Navigate to project folder > Import & Edit
 ```
 
-### 2. Run the Test Scene
+### 2. Enable the MetaRoom Editor Plugin
+- Go to **Project > Project Settings > Plugins**
+- Find "MetaRoom Editor" and check the Enable checkbox
+- This enables the visual room editor!
+
+### 3. Run the Test Scene
 - Press **F5** or click the Play button
 - You'll see a generated dungeon visualized on screen
 - Press **R** to regenerate with the same seed
 - Press **S** to generate with a new random seed
 
-### 3. Run Automated Tests (Optional)
+### 4. Try the Visual Room Editor
+- In FileSystem, navigate to `resources/rooms/`
+- Click on any `.tres` file (e.g., `cross_room.tres`)
+- The visual editor appears in the Inspector!
+- Click cells to paint them, toggle connections, and more
+
+### 5. Run Automated Tests (Optional)
 - File > Open Scene > `scenes/test_system.tscn`
 - Press **F5**
 - Check console output for test results
@@ -33,6 +44,14 @@ Godot-Dungeon-generator/
 ├── 📄 FINAL_SUMMARY.md             ← Project summary
 │
 ├── 🎮 project.godot                ← Godot project file
+│
+├── 📁 addons/                      ← Editor plugins
+│   └── meta_room_editor/             • Visual room editor
+│       ├── plugin.gd                   • Plugin registration
+│       ├── plugin.cfg                  • Plugin config
+│       ├── meta_room_inspector_plugin.gd  • Inspector integration
+│       ├── meta_room_editor_property.gd   • Editor UI
+│       └── README.md                   • Plugin docs
 │
 ├── 📁 scripts/                     ← All GDScript files
 │   ├── meta_cell.gd                  • Cell resource
@@ -56,20 +75,23 @@ Godot-Dungeon-generator/
 ## Using in Your Project
 
 ### Method 1: Copy Everything
-1. Copy the entire `scripts/` and `resources/` folders to your project
+1. Copy the entire `scripts/`, `resources/`, and `addons/` folders to your project
 2. Copy the room templates you want
-3. Create a DungeonGenerator node in your scene
-4. Load room templates and generate!
+3. Enable the MetaRoom Editor plugin in your project
+4. Create a DungeonGenerator node in your scene
+5. Load room templates and generate!
 
 ### Method 2: Use as Plugin
 1. Copy `scripts/` to `addons/dungeon_generator/`
-2. Create plugin.cfg
-3. Enable in Project Settings
+2. Copy `addons/meta_room_editor/` to your addons folder
+3. Create plugin.cfg for dungeon_generator
+4. Enable both plugins in Project Settings
 
 ### Method 3: Scene Instance
-1. Copy `scripts/` and `resources/` to your project
-2. Instance `test_dungeon.tscn` in your scene
-3. Modify as needed
+1. Copy `scripts/`, `resources/`, and `addons/` to your project
+2. Enable the MetaRoom Editor plugin
+3. Instance `test_dungeon.tscn` in your scene
+4. Modify as needed
 
 ## Basic Usage
 

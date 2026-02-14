@@ -5,6 +5,7 @@ A robust, room-based dungeon generator for Godot 4.6 using a random walk algorit
 ## Features
 
 - **Resource-Based Room Templates**: Create and edit room layouts in the Godot editor
+- **Visual Room Editor**: Interactive grid-based editor plugin for easy room creation
 - **Smart Room Rotation**: Automatically tries all 4 rotations to find valid placements
 - **Connection Matching**: Ensures rooms connect properly with matching door directions
 - **No Overlaps**: Collision detection prevents rooms from overlapping
@@ -14,6 +15,13 @@ A robust, room-based dungeon generator for Godot 4.6 using a random walk algorit
 ## Project Structure
 
 ```
+├── addons/
+│   └── meta_room_editor/       # Visual editor plugin for MetaRoom resources
+│       ├── plugin.gd           # Plugin registration
+│       ├── plugin.cfg          # Plugin configuration
+│       ├── meta_room_inspector_plugin.gd  # Inspector integration
+│       ├── meta_room_editor_property.gd   # Visual editor UI
+│       └── README.md           # Plugin documentation
 ├── scripts/
 │   ├── meta_cell.gd           # Single cell in a room (floor, door, blocked)
 │   ├── meta_room.gd           # Room template (grid of cells)
@@ -79,6 +87,28 @@ Key features:
 4. Press S to generate with a new random seed
 
 ### Creating Custom Room Templates
+
+**Option 1: Using the Visual Editor (Recommended)**
+
+1. Enable the MetaRoom Editor plugin:
+   - Go to **Project > Project Settings > Plugins**
+   - Find "MetaRoom Editor" and enable it
+2. Create a new MetaRoom resource:
+   - Right-click in `resources/rooms/`
+   - Select **New Resource...**
+   - Choose **MetaRoom**
+   - Save with a descriptive name
+3. The visual editor will appear in the Inspector:
+   - Set room dimensions and click "Resize Room"
+   - Select a cell type (BLOCKED, FLOOR, DOOR)
+   - Click cells to paint them
+   - Select a connection direction (UP, RIGHT, BOTTOM, LEFT)
+   - Click edge cells to toggle connections
+4. Save and use your new room!
+
+See `addons/meta_room_editor/README.md` for detailed editor documentation.
+
+**Option 2: Manual Creation**
 
 1. In Godot, create a new Resource
 2. Set the script to `res://scripts/meta_room.gd`

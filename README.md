@@ -1,9 +1,12 @@
 # Godot 4.6 Dungeon Generator
 
-A robust, room-based dungeon generator for Godot 4.6 using a random walk algorithm. This system allows you to create complex dungeons by connecting pre-made room templates.
+A robust, room-based dungeon generator for Godot 4.6 using a multi-walker algorithm. This system allows you to create complex, interconnected dungeons with loops by connecting pre-made room templates.
 
 ## Features
 
+- **Multi-Walker Generation**: Multiple independent walkers simultaneously place rooms
+- **Interconnected Dungeons**: Walkers create loops by connecting to existing rooms
+- **Cell-Count Based**: Generation stops when a target cell count is reached (not just room count)
 - **Resource-Based Room Templates**: Create and edit room layouts in the Godot editor
 - **Visual Room Editor**: Interactive grid-based editor plugin for easy room creation
 - **Smart Room Rotation**: Automatically tries all 4 rotations to find valid placements
@@ -107,28 +110,64 @@ This allows you to safely implement features like:
 
 See `DOOR_PLACEMENT_FIX.md` for detailed explanation of this system.
 
-### 6. Dungeon Generation Algorithm
+### 6. Multi-Walker Dungeon Generation Algorithm
 
-The generator uses a **room-based random walk**:
+The generator uses a **multi-walker room placement algorithm** that creates more organic, interconnected dungeons:
 
-1. Start with a random room that has connections
-2. **Clone it** to avoid modifying the template
-3. Place it at the origin
-4. Pick a random connection point from the current room
-5. Pick a random room template from available rooms
-6. Try all 4 rotations to find a matching connection (**rotations return clones**)
-7. Check if the room can be placed (allowing blocked cell overlaps)
-8. If valid, **place the cloned room**, merge overlapping connections, and move to it
-9. Repeat until target room count or no valid placements
+#### How It Works:
 
-Key features:
-- **All placed rooms are clones** - templates remain unchanged
-- Prevents revisiting previously visited rooms
-- Smart connection matching (opposite directions)
-- Allows blocked-blocked overlaps for compact dungeons
-- Merges opposing connections in overlapping cells
-- Supports safe cell type modifications (e.g., door placement)
-- Maximum attempts limit to avoid infinite loops
+1. **Initialization**:
+   - Start with a random room that has connections
+   - **Clone it** to avoid modifying the template
+   - Place it at the origin (0, 0)
+   - Spawn multiple walkers at the first room
+
+2. **Walker Behavior**:
+   - Each walker independently tries to place rooms from its current position
+   - Tries up to 10 times per room (different templates/rotations)
+   - If successful, moves to the newly placed room
+   - If failed, teleports to a random room with open connections
+   - Dies after placing its maximum number of rooms
+   - When a walker dies, a new one spawns at a random room with open connections
+
+3. **Generation Loop**:
+   - Each iteration, all walkers attempt to place one room
+   - Continues until target cell count is reached
+   - Allows loops: walkers can connect to existing rooms (reduces dead ends)
+   - Safety limit prevents infinite loops
+
+4. **Room Placement**:
+   - Pick random connection from walker's current room
+   - Try random template and rotation
+   - Check if room can be placed (allowing blocked cell overlaps)
+   - If valid, **place the cloned room** and merge overlapping connections
+   - Walker moves to the new room
+
+#### Key Features:
+
+- **Multiple Simultaneous Walkers**: 3+ walkers work in parallel for varied layouts
+- **Cell-Count Based**: Stops at target cell count, not room count (more precise control)
+- **Automatic Loop Creation**: Walkers can connect to existing rooms naturally
+- **Smart Teleportation**: Walkers jump to rooms with open connections when stuck
+- **Walker Lifecycle**: Dead walkers respawn, maintaining constant exploration
+- **All placed rooms are clones**: Templates remain unchanged
+- **Smart connection matching**: Opposite directions must match
+- **Blocked cell overlap**: Compact dungeons with shared walls
+- **Connection merging**: Opposing connections create solid walls or doors
+- **Safe cell modifications**: Support for dynamic door placement
+
+#### Configuration Parameters:
+
+- `num_walkers`: Number of simultaneous walkers (default: 3)
+- `max_rooms_per_walker`: Max rooms each walker places before dying (default: 20)
+- `max_placement_attempts_per_room`: Tries per room placement (default: 10)
+- `target_meta_cell_count`: Stop when this many cells are placed (default: 500)
+
+This algorithm creates dungeons with:
+- More organic layouts (multiple growth points)
+- Fewer dead ends (walkers create loops)
+- Better connectivity (walkers meet and merge)
+- Predictable size (cell count based, not room count)
 
 ## Usage
 
@@ -197,9 +236,12 @@ generator.room_templates = [
     # ... more rooms
 ]
 
-# Configure generation
-generator.target_room_count = 20
-generator.generation_seed = 12345  # 0 for random
+# Configure multi-walker generation
+generator.num_walkers = 3                          # Number of simultaneous walkers
+generator.max_rooms_per_walker = 20                # Max rooms per walker before death
+generator.max_placement_attempts_per_room = 10     # Tries per room placement
+generator.target_meta_cell_count = 500             # Stop at this many cells
+generator.generation_seed = 12345                  # 0 for random
 
 # Generate
 if generator.generate():
@@ -274,9 +316,11 @@ X X X
 
 ### DungeonGenerator
 - `room_templates`: Array of MetaRoom resources to use
-- `target_room_count`: Desired number of rooms (default: 10)
+- `num_walkers`: Number of simultaneous walkers (default: 3)
+- `max_rooms_per_walker`: Max rooms each walker can place before dying (default: 20)
+- `max_placement_attempts_per_room`: Max attempts to place each room (default: 10)
+- `target_meta_cell_count`: Target total cell count to generate (default: 500)
 - `generation_seed`: Seed for reproducible generation (0 = random)
-- `max_placement_attempts`: Max attempts before giving up (default: 100)
 
 ### DungeonVisualizer
 - `cell_size`: Size of each cell in pixels (default: 32)
@@ -303,9 +347,10 @@ X X X
 ## Performance
 
 The generator is fast and reliable:
-- Typical generation: < 100ms for 10-20 rooms
+- Typical generation: < 200ms for 500 cells (~15-25 rooms depending on size)
 - Collision detection uses Dictionary lookup (O(1))
 - Room rotation is lazy (only when needed)
+- Multiple walkers work in sequence (not parallel threads)
 
 ## Extending the System
 

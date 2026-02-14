@@ -1,8 +1,9 @@
 class_name DungeonGenerator
 extends Node
 
-## DungeonGenerator creates a dungeon by placing rooms using a random walk algorithm.
-## It ensures rooms don't overlap and connections match properly.
+## DungeonGenerator creates a dungeon by placing rooms using a multi-walker algorithm.
+## Multiple walkers independently place rooms until a target cell count is reached.
+## This creates more organic, interconnected dungeons with loops.
 
 ## Placed room data structure
 class PlacedRoom:
@@ -20,17 +21,47 @@ class PlacedRoom:
 		return position + Vector2i(local_x, local_y)
 
 
+## Walker class for multi-walker dungeon generation
+## Each walker independently places rooms until it dies or reaches its room limit
+class Walker:
+	var current_room: PlacedRoom  ## The room the walker is currently at
+	var rooms_placed: int = 0     ## Number of rooms this walker has placed
+	var is_alive: bool = true     ## Whether this walker is still active
+	var max_rooms: int            ## Maximum rooms this walker can place before dying
+	
+	func _init(starting_room: PlacedRoom, p_max_rooms: int):
+		current_room = starting_room
+		max_rooms = p_max_rooms
+		rooms_placed = 0
+		is_alive = true
+	
+	## Check if walker should die
+	func check_death() -> void:
+		if rooms_placed >= max_rooms:
+			is_alive = false
+	
+	## Move walker to a new room
+	func move_to_room(room: PlacedRoom) -> void:
+		current_room = room
+
+
 ## Available room templates to use for generation
 @export var room_templates: Array[MetaRoom] = []
-
-## Target number of rooms to generate
-@export var target_room_count: int = 10
 
 ## Random seed for generation (0 = random)
 @export var generation_seed: int = 0
 
-## Maximum attempts to place a room before giving up
-@export var max_placement_attempts: int = 100
+## Number of walkers to run simultaneously
+@export var num_walkers: int = 3
+
+## Maximum rooms each walker can place before dying
+@export var max_rooms_per_walker: int = 20
+
+## Maximum attempts to place each individual room (tries different templates/rotations)
+@export var max_placement_attempts_per_room: int = 10
+
+## Target total cell count (stop when this many cells are placed)
+@export var target_meta_cell_count: int = 500
 
 ## List of all placed rooms in the dungeon
 var placed_rooms: Array[PlacedRoom] = []
@@ -38,12 +69,15 @@ var placed_rooms: Array[PlacedRoom] = []
 ## Grid of occupied cells (for collision detection)
 var occupied_cells: Dictionary = {}  # Vector2i -> PlacedRoom
 
+## Active walkers during generation
+var active_walkers: Array[Walker] = []
+
 
 ## Signal emitted when generation completes
-signal generation_complete(success: bool, room_count: int)
+signal generation_complete(success: bool, room_count: int, cell_count: int)
 
 
-## Generates the dungeon
+## Generates the dungeon using multi-walker algorithm
 func generate() -> bool:
 	# Clear previous generation
 	clear_dungeon()
@@ -57,6 +91,19 @@ func generate() -> bool:
 		push_error("DungeonGenerator: No room templates provided")
 		return false
 	
+	# Validate parameters
+	if num_walkers <= 0:
+		push_error("DungeonGenerator: num_walkers must be greater than 0")
+		return false
+	
+	if max_rooms_per_walker <= 0:
+		push_error("DungeonGenerator: max_rooms_per_walker must be greater than 0")
+		return false
+	
+	if target_meta_cell_count <= 0:
+		push_error("DungeonGenerator: target_meta_cell_count must be greater than 0")
+		return false
+	
 	# Find a suitable starting room (one with connections)
 	var start_room = _get_random_room_with_connections()
 	if start_room == null:
@@ -68,27 +115,53 @@ func generate() -> bool:
 	var first_placement = PlacedRoom.new(first_room_clone, Vector2i.ZERO, RoomRotator.Rotation.DEG_0)
 	_place_room(first_placement)
 	
-	# Generate remaining rooms using random walk
-	var current_room = first_placement
-	var attempts = 0
+	# Initialize walkers at the first room
+	active_walkers.clear()
+	for i in range(num_walkers):
+		var walker = Walker.new(first_placement, max_rooms_per_walker)
+		active_walkers.append(walker)
 	
-	while placed_rooms.size() < target_room_count and attempts < max_placement_attempts:
-		var next_placement = _try_place_next_room(current_room)
+	# Main generation loop - continue until target cell count is reached
+	var iterations = 0
+	var max_iterations = 10000  # Safety limit to prevent infinite loops
+	
+	while _count_total_cells() < target_meta_cell_count and iterations < max_iterations:
+		iterations += 1
 		
-		if next_placement != null:
-			_place_room(next_placement)
-			current_room = next_placement
-			attempts = 0  # Reset attempts on success
-		else:
-			# Try from a different random placed room
-			if placed_rooms.size() > 1:
-				current_room = placed_rooms[randi() % placed_rooms.size()]
-			attempts += 1
+		# Each walker attempts to place one room
+		for walker in active_walkers:
+			if not walker.is_alive:
+				continue
+			
+			# Try to place a room from this walker's current position
+			var placed = _walker_try_place_room(walker)
+			
+			if placed:
+				walker.rooms_placed += 1
+				walker.check_death()
+				
+				# If walker died, spawn a new one
+				if not walker.is_alive:
+					_respawn_walker(walker)
+			else:
+				# Failed to place room - try teleporting to another room with open connections
+				var teleport_target = _get_random_room_with_open_connections()
+				if teleport_target != null:
+					walker.move_to_room(teleport_target)
+				else:
+					# No rooms with open connections - walker dies
+					walker.is_alive = false
+					_respawn_walker(walker)
+			
+			# Check if we've reached target cell count
+			if _count_total_cells() >= target_meta_cell_count:
+				break
 	
-	var success = placed_rooms.size() >= target_room_count
-	generation_complete.emit(success, placed_rooms.size())
+	var cell_count = _count_total_cells()
+	var success = cell_count >= target_meta_cell_count
+	generation_complete.emit(success, placed_rooms.size(), cell_count)
 	
-	print("DungeonGenerator: Generated ", placed_rooms.size(), " rooms")
+	print("DungeonGenerator: Generated ", placed_rooms.size(), " rooms with ", cell_count, " cells")
 	return success
 
 
@@ -123,6 +196,100 @@ func _try_place_next_room(current_placement: PlacedRoom) -> PlacedRoom:
 					return placement
 	
 	return null
+
+
+## Walker attempts to place a room from its current position
+## Returns true if a room was successfully placed
+func _walker_try_place_room(walker: Walker) -> bool:
+	# Get open connections from walker's current room
+	var open_connections = _get_open_connections(walker.current_room)
+	
+	# If no open connections, walker can't place a room
+	if open_connections.is_empty():
+		return false
+	
+	# Shuffle connections for randomness
+	open_connections.shuffle()
+	
+	# Try to place a room at each open connection
+	for conn_point in open_connections:
+		# Try up to max_placement_attempts_per_room times with different templates/rotations
+		for attempt in range(max_placement_attempts_per_room):
+			# Pick random template
+			var template = room_templates[randi() % room_templates.size()]
+			
+			# Pick random rotation
+			var rotations = RoomRotator.get_all_rotations()
+			var rotation = rotations[randi() % rotations.size()]
+			
+			var rotated_room = RoomRotator.rotate_room(template, rotation)
+			var placement = _try_connect_room(walker.current_room, conn_point, rotated_room, rotation)
+			
+			if placement != null:
+				_place_room(placement)
+				walker.move_to_room(placement)
+				return true
+	
+	return false
+
+
+## Respawns a walker at a random room with open connections
+func _respawn_walker(walker: Walker) -> void:
+	var spawn_target = _get_random_room_with_open_connections()
+	if spawn_target != null:
+		walker.current_room = spawn_target
+		walker.rooms_placed = 0
+		walker.is_alive = true
+
+
+## Gets all open connections from a placed room
+## Open connections are those that don't already lead to an existing room
+func _get_open_connections(placement: PlacedRoom) -> Array[MetaRoom.ConnectionPoint]:
+	var open_connections: Array[MetaRoom.ConnectionPoint] = []
+	var all_connections = placement.room.get_connection_points()
+	
+	for conn_point in all_connections:
+		# Get the world position of this connection
+		var conn_world_pos = placement.get_cell_world_pos(conn_point.x, conn_point.y)
+		
+		# Get the position that would be adjacent in the connection direction
+		var adjacent_pos = conn_world_pos + _get_direction_offset(conn_point.direction)
+		
+		# If there's no room at the adjacent position, this connection is open
+		if not occupied_cells.has(adjacent_pos):
+			open_connections.append(conn_point)
+	
+	return open_connections
+
+
+## Gets a random placed room that has at least one open connection
+func _get_random_room_with_open_connections() -> PlacedRoom:
+	var valid_rooms: Array[PlacedRoom] = []
+	
+	for placement in placed_rooms:
+		var open_connections = _get_open_connections(placement)
+		if not open_connections.is_empty():
+			valid_rooms.append(placement)
+	
+	if valid_rooms.is_empty():
+		return null
+	
+	return valid_rooms[randi() % valid_rooms.size()]
+
+
+## Counts the total number of cells placed in the dungeon
+## This counts all non-null cells, not just room count
+func _count_total_cells() -> int:
+	var total = 0
+	
+	for placement in placed_rooms:
+		for y in range(placement.room.height):
+			for x in range(placement.room.width):
+				var cell = placement.room.get_cell(x, y)
+				if cell != null:
+					total += 1
+	
+	return total
 
 
 ## Tries to connect a room at the specified connection point
@@ -291,6 +458,7 @@ func _get_random_room_with_connections() -> MetaRoom:
 func clear_dungeon() -> void:
 	placed_rooms.clear()
 	occupied_cells.clear()
+	active_walkers.clear()
 
 
 ## Gets the bounds of the generated dungeon

@@ -222,8 +222,11 @@ func get_dungeon_bounds() -> Rect2i:
 	if placed_rooms.is_empty():
 		return Rect2i(0, 0, 0, 0)
 	
-	var min_pos = Vector2i(999999, 999999)
-	var max_pos = Vector2i(-999999, -999999)
+	# Initialize with first cell position
+	var first_placement = placed_rooms[0]
+	var first_pos = first_placement.get_cell_world_pos(0, 0)
+	var min_pos = first_pos
+	var max_pos = first_pos
 	
 	for placement in placed_rooms:
 		for y in range(placement.room.height):

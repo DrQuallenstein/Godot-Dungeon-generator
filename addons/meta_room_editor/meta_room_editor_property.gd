@@ -24,24 +24,38 @@ var _initialized: bool = false
 ## Initialize the editor with the MetaRoom resource
 ## This must be called after meta_room is set
 func initialize() -> void:
+	print("MetaRoom Editor: initialize() called")
+	print("MetaRoom Editor: _initialized = ", _initialized)
+	print("MetaRoom Editor: meta_room = ", meta_room)
+	
 	if _initialized:
+		print("MetaRoom Editor: Already initialized, returning")
 		return
 	
 	if not meta_room:
 		push_error("MetaRoom editor: Cannot initialize without meta_room")
+		print("MetaRoom Editor: ERROR - No meta_room set!")
 		return
 	
+	print("MetaRoom Editor: Starting initialization...")
 	_initialized = true
 	_setup_ui()
+	print("MetaRoom Editor: UI setup complete")
 	_refresh_grid()
+	print("MetaRoom Editor: Grid refresh complete")
+	print("MetaRoom Editor: Initialization finished successfully")
 
 
 func _setup_ui() -> void:
+	print("MetaRoom Editor: _setup_ui() called")
+	print("MetaRoom Editor: Creating UI elements...")
+	
 	# Info section
 	info_label = Label.new()
 	info_label.text = "MetaRoom Visual Editor"
 	info_label.add_theme_font_size_override("font_size", 16)
 	add_child(info_label)
+	print("MetaRoom Editor: Added info label")
 	
 	# Room name
 	var name_container = HBoxContainer.new()
@@ -166,10 +180,16 @@ func _setup_ui() -> void:
 	grid_container.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	grid_container.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	add_child(grid_container)
+	print("MetaRoom Editor: Grid container created and added")
+	print("MetaRoom Editor: _setup_ui() completed")
 
 
 func _refresh_grid() -> void:
+	print("MetaRoom Editor: _refresh_grid() called")
+	print("MetaRoom Editor: grid_container = ", grid_container)
+	
 	if not grid_container:
+		print("MetaRoom Editor: ERROR - grid_container is null!")
 		return
 	
 	# Clear existing buttons
@@ -179,8 +199,10 @@ func _refresh_grid() -> void:
 	
 	# Set grid columns
 	grid_container.columns = meta_room.width
+	print("MetaRoom Editor: Creating grid with ", meta_room.width, "x", meta_room.height, " cells")
 	
 	# Create buttons for each cell
+	var button_count = 0
 	for y in range(meta_room.height):
 		for x in range(meta_room.width):
 			var btn = Button.new()
@@ -193,9 +215,16 @@ func _refresh_grid() -> void:
 			var cell = meta_room.get_cell(x, y)
 			if cell:
 				_update_cell_button(btn, cell, x, y)
+			else:
+				print("MetaRoom Editor: WARNING - No cell at position ", x, ",", y)
 			
 			grid_container.add_child(btn)
 			cell_buttons.append(btn)
+			button_count += 1
+	
+	print("MetaRoom Editor: Created ", button_count, " buttons in grid")
+	print("MetaRoom Editor: grid_container children count: ", grid_container.get_child_count())
+
 
 
 func _update_cell_button(btn: Button, cell: MetaCell, x: int, y: int) -> void:

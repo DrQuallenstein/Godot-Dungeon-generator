@@ -5,6 +5,9 @@ A robust, room-based dungeon generator for Godot 4.6 using a multi-walker algori
 ## Features
 
 - **Multi-Walker Generation**: Multiple independent walkers simultaneously place rooms
+- **Unique Room Placement**: Each room template can only be placed once (no duplicates)
+- **Required Connections**: Rooms can specify connections that MUST be connected (e.g., T-rooms need all 3 connections used)
+- **Smart Walker Spawning**: New walkers spawn at current position or rooms with unsatisfied required connections
 - **Interconnected Dungeons**: Walkers create loops by connecting to existing rooms
 - **Cell-Count Based**: Generation stops when a target cell count is reached (not just room count)
 - **Resource-Based Room Templates**: Create and edit room layouts in the Godot editor
@@ -57,6 +60,10 @@ A room template consisting of:
 - Width and height dimensions
 - Grid of MetaCells
 - Connection points (cells on edges with connections)
+- **Required Connections**: Array of directions that MUST be connected to other rooms
+  - Example: A T-room with 3 connections should have `required_connections = [UP, LEFT, RIGHT]`
+  - Ensures rooms make logical sense (no T-rooms with only 1 connection used)
+  - Generator prefers placing rooms near those with unsatisfied required connections
 
 ### 3. Room Rotation
 The `RoomRotator` class can rotate rooms by 0°, 90°, 180°, or 270°:
@@ -119,32 +126,45 @@ The generator uses a **multi-walker room placement algorithm** that creates more
 1. **Initialization**:
    - Start with a random room that has connections
    - **Clone it** to avoid modifying the template
+   - Mark it as used (no duplicates allowed)
    - Place it at the origin (0, 0)
    - Spawn multiple walkers at the first room
 
 2. **Walker Behavior**:
    - Each walker independently tries to place rooms from its current position
-   - Tries up to 10 times per room (different templates/rotations)
-   - If successful, moves to the newly placed room
+   - **Only tries unused room templates** (each template can only be placed once)
+   - Tries up to 10 times per room (different unused templates/rotations)
+   - If successful, marks template as used, moves to the newly placed room
    - If failed, teleports to a random room with open connections
    - Dies after placing its maximum number of rooms
    - When a walker dies, a new one spawns at a random room with open connections
 
-3. **Generation Loop**:
+3. **Walker Spawning**:
+   - When a walker dies, a new one spawns
+   - **50% chance to spawn at the dead walker's current position** (if it has open connections)
+   - 50% chance to spawn at a random room with open connections
+   - **Prefers rooms with unsatisfied required connections** (70% of the time)
+   - This ensures rooms with required connections get properly connected
+
+4. **Generation Loop**:
    - Each iteration, all walkers attempt to place one room
    - Continues until target cell count is reached
    - Allows loops: walkers can connect to existing rooms (reduces dead ends)
    - Safety limit prevents infinite loops
 
-4. **Room Placement**:
+5. **Room Placement**:
    - Pick random connection from walker's current room
-   - Try random template and rotation
+   - Try random unused template and rotation
    - Check if room can be placed (allowing blocked cell overlaps)
-   - If valid, **place the cloned room** and merge overlapping connections
+   - If valid, **place the cloned room**, mark template as used, merge overlapping connections
+   - Track which connections got connected for required connection validation
    - Walker moves to the new room
 
 #### Key Features:
 
+- **No Duplicate Rooms**: Each room template can only be placed once
+- **Required Connections**: Rooms can specify connections that MUST be used
+- **Smart Walker Spawning**: Prioritizes rooms with unsatisfied required connections
 - **Multiple Simultaneous Walkers**: 3+ walkers work in parallel for varied layouts
 - **Cell-Count Based**: Stops at target cell count, not room count (more precise control)
 - **Automatic Loop Creation**: Walkers can connect to existing rooms naturally
@@ -207,6 +227,10 @@ See `CAMERA_CONTROLS.md` for detailed camera documentation.
    - Click cells to paint them
    - Select a connection direction (UP, RIGHT, BOTTOM, LEFT)
    - Click edge cells to toggle connections
+   - **Set Required Connections**: Specify which connections MUST be connected
+     - For a T-room, set required_connections to [UP, LEFT, RIGHT]
+     - For a cross room, set required_connections to [UP, RIGHT, BOTTOM, LEFT]
+     - Leave empty for rooms where any connection is optional
 4. Save and use your new room!
 
 See `addons/meta_room_editor/README.md` for detailed editor documentation.
@@ -220,7 +244,8 @@ See `addons/meta_room_editor/README.md` for detailed editor documentation.
 5. For each cell:
    - Set cell_type (BLOCKED, FLOOR, DOOR)
    - Set connection flags for edge cells
-6. Save as `.tres` file in `resources/rooms/`
+6. **Set required_connections array**: Add MetaCell.Direction values for required connections
+7. Save as `.tres` file in `resources/rooms/`
 
 ### Using the Generator in Code
 
@@ -311,17 +336,30 @@ X X X
 3. **Edge Connections**: Place connections on room edges only
 4. **Symmetry**: Symmetric rooms work well with rotation
 5. **Dead Ends**: Include some rooms with only 1 connection for endpoints
+6. **Required Connections**: Set required_connections for rooms that need specific connections
+   - T-rooms should require all 3 connections: `[UP, LEFT, RIGHT]`
+   - Cross rooms should require all 4: `[UP, RIGHT, BOTTOM, LEFT]`
+   - L-corridors can have no required connections (flexible usage)
+   - Straight corridors can require both ends: `[UP, BOTTOM]` or `[LEFT, RIGHT]`
+7. **Unique Rooms**: Remember each template can only be placed once - create many variations!
 
 ## Configuration Parameters
 
 ### DungeonGenerator
-- `room_templates`: Array of MetaRoom resources to use
+- `room_templates`: Array of MetaRoom resources to use (each can only be placed once)
 - `num_walkers`: Number of simultaneous walkers (default: 3)
 - `max_rooms_per_walker`: Max rooms each walker can place before dying (default: 20)
 - `max_placement_attempts_per_room`: Max attempts to place each room (default: 10)
 - `target_meta_cell_count`: Target total cell count to generate (default: 500)
 - `max_iterations`: Maximum generation loop iterations for safety (default: 10000)
 - `generation_seed`: Seed for reproducible generation (0 = random)
+
+### MetaRoom
+- `width`: Width of the room in cells
+- `height`: Height of the room in cells
+- `cells`: Array of MetaCell resources
+- `room_name`: Identifier for this room template
+- `required_connections`: Array of MetaCell.Direction values that MUST be connected (new!)
 
 ### DungeonVisualizer
 - `cell_size`: Size of each cell in pixels (default: 32)

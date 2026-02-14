@@ -187,10 +187,6 @@ func generate() -> bool:
 				print("  Templates available: ", room_templates.size())
 				print("  Templates used: ", used_room_templates.size())
 				break
-		
-		# Break if target reached
-		if _count_total_cells() >= target_meta_cell_count:
-			break
 	
 	var cell_count = _count_total_cells()
 	var success = cell_count >= target_meta_cell_count

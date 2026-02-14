@@ -67,8 +67,8 @@ validate_gdscript() {
         errors=$((errors + 1))
     fi
     
-    # Check for common typos
-    if grep -q "fucn\|retrun\|esle" "$file"; then
+    # Check for common typos (with word boundaries to avoid false positives)
+    if grep -qE "\bfucn\b|\bretrun\b|\besle\b" "$file"; then
         echo "  ⚠ Warning: Possible typos detected"
         errors=$((errors + 1))
     fi

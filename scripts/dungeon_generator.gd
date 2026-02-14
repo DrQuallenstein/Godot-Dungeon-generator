@@ -56,7 +56,8 @@ class Walker:
 	
 	## Generate a unique color for this walker
 	func _generate_walker_color(id: int) -> Color:
-		var hue = (id * 0.618033988749895) # Golden ratio for nice distribution
+		const GOLDEN_RATIO = 0.618033988749895  # Golden ratio for nice color distribution
+		var hue = (id * GOLDEN_RATIO)
 		hue = fmod(hue, 1.0)
 		return Color.from_hsv(hue, 0.8, 0.9)
 

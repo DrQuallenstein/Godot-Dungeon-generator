@@ -12,6 +12,7 @@ extends Node2D
 
 var generator: DungeonGenerator
 var cached_cell_count: int = 0
+var cached_active_walker_count: int = 0  # Cache active walker count
 var walker_positions: Dictionary = {}  # walker_id -> current position
 
 
@@ -45,6 +46,7 @@ func _generate_and_visualize() -> void:
 func _on_generation_complete(success: bool, room_count: int, cell_count: int) -> void:
 	print("Dungeon generation complete. Success: ", success, ", Rooms: ", room_count, ", Cells: ", cell_count)
 	cached_cell_count = cell_count
+	_update_walker_count()
 	queue_redraw()
 
 
@@ -56,12 +58,21 @@ func _on_room_placed(placement: DungeonGenerator.PlacedRoom, walker: DungeonGene
 func _on_walker_moved(walker: DungeonGenerator.Walker, from_pos: Vector2i, to_pos: Vector2i) -> void:
 	# Track walker position for visualization
 	walker_positions[walker.walker_id] = to_pos
+	_update_walker_count()
 	queue_redraw()
 
 
 func _on_generation_step(iteration: int, total_cells: int) -> void:
 	# Update cached cell count during generation
 	cached_cell_count = total_cells
+
+
+## Update the cached active walker count
+func _update_walker_count() -> void:
+	cached_active_walker_count = 0
+	for walker in generator.active_walkers:
+		if walker.is_alive:
+			cached_active_walker_count += 1
 
 
 func _draw() -> void:
@@ -184,17 +195,11 @@ func _draw_statistics(bounds: Rect2i) -> void:
 	var font = ThemeDB.fallback_font
 	var font_size = 14
 	
-	# Count active walkers
-	var active_walker_count = 0
-	for walker in generator.active_walkers:
-		if walker.is_alive:
-			active_walker_count += 1
-	
 	var stats = [
 		"Rooms: %d" % generator.placed_rooms.size(),
 		"Cells: %d / %d" % [cached_cell_count, generator.target_meta_cell_count],
 		"Bounds: %d x %d" % [bounds.size.x, bounds.size.y],
-		"Active Walkers: %d / %d" % [active_walker_count, generator.num_walkers],
+		"Active Walkers: %d / %d" % [cached_active_walker_count, generator.num_walkers],
 		"Compactness Bias: %.1f" % generator.compactness_bias,
 		"Seed: %d" % generator.generation_seed
 	]

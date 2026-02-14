@@ -93,6 +93,12 @@ Three types of cells available:
 - Restart Godot if needed
 - Check that you're viewing a MetaRoom resource (not MetaCell)
 
+**Grid not displaying or showing only a thin line:**
+- This issue has been fixed in the latest version
+- Update to the latest plugin version
+- The grid should display 60x60 pixel buttons for each cell
+- If still having issues, disable and re-enable the plugin in Project Settings
+
 **Changes not saving:**
 - Make sure you're editing a saved resource file (.tres)
 - Check file permissions

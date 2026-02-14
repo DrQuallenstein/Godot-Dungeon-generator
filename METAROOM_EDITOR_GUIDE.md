@@ -188,6 +188,12 @@ Done! Room saved automatically.
 - Restart Godot if needed
 - Confirm you're viewing a MetaRoom resource (not MetaCell)
 
+**Q: Grid not displaying or showing only a line?**
+- This was fixed in the latest version
+- Make sure you have the updated plugin files
+- The grid should show 60x60 pixel buttons for each cell
+- If still having issues, try disabling and re-enabling the plugin
+
 **Q: Can't add connections to middle cells?**
 - This is correct! Only edge cells can have connections to other rooms
 - Middle cells are internal to the room

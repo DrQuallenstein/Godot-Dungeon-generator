@@ -1,0 +1,42 @@
+[gd_scene load_steps=7 format=3 uid="uid://ca3sxg8wqw8rx"]
+
+[ext_resource type="Script" path="res://scripts/dungeon_generator.gd" id="1"]
+[ext_resource type="Resource" uid="uid://cross_room" path="res://resources/rooms/cross_room.tres" id="2"]
+[ext_resource type="Resource" uid="uid://l_corridor" path="res://resources/rooms/l_corridor.tres" id="3"]
+[ext_resource type="Resource" uid="uid://straight_corridor" path="res://resources/rooms/straight_corridor.tres" id="4"]
+[ext_resource type="Resource" uid="uid://t_room" path="res://resources/rooms/t_room.tres" id="5"]
+[ext_resource type="Script" path="res://scripts/dungeon_visualizer.gd" id="6"]
+
+[node name="TestDungeon" type="Node2D"]
+
+[node name="DungeonGenerator" type="Node" parent="."]
+script = ExtResource("1")
+room_templates = Array[Resource]([ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5")])
+target_room_count = 15
+generation_seed = 12345
+max_placement_attempts = 100
+
+[node name="DungeonVisualizer" type="Node2D" parent="."]
+script = ExtResource("6")
+cell_size = 32
+draw_grid = true
+draw_connections = true
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(640, 360)
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="InfoLabel" type="Label" parent="CanvasLayer"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 400.0
+offset_bottom = 200.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 1
+theme_override_font_sizes/font_size = 14
+text = "Dungeon Generator Test Scene
+Press R to regenerate
+Press S to generate with new random seed"

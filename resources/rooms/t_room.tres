@@ -1,0 +1,83 @@
+[gd_resource type="Resource" script_class="MetaRoom" load_steps=12 format=3]
+
+[ext_resource type="Script" path="res://scripts/meta_room.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/meta_cell.gd" id="2"]
+
+[sub_resource type="Resource" id="1"]
+script = ExtResource("2")
+cell_type = 1
+connection_up = false
+connection_right = false
+connection_bottom = false
+connection_left = true
+
+[sub_resource type="Resource" id="2"]
+script = ExtResource("2")
+cell_type = 1
+connection_up = true
+connection_right = false
+connection_bottom = false
+connection_left = false
+
+[sub_resource type="Resource" id="3"]
+script = ExtResource("2")
+cell_type = 1
+connection_up = false
+connection_right = true
+connection_bottom = false
+connection_left = false
+
+[sub_resource type="Resource" id="4"]
+script = ExtResource("2")
+cell_type = 0
+connection_up = false
+connection_right = false
+connection_bottom = false
+connection_left = false
+
+[sub_resource type="Resource" id="5"]
+script = ExtResource("2")
+cell_type = 1
+connection_up = false
+connection_right = false
+connection_bottom = false
+connection_left = false
+
+[sub_resource type="Resource" id="6"]
+script = ExtResource("2")
+cell_type = 0
+connection_up = false
+connection_right = false
+connection_bottom = false
+connection_left = false
+
+[sub_resource type="Resource" id="7"]
+script = ExtResource("2")
+cell_type = 0
+connection_up = false
+connection_right = false
+connection_bottom = false
+connection_left = false
+
+[sub_resource type="Resource" id="8"]
+script = ExtResource("2")
+cell_type = 1
+connection_up = false
+connection_right = false
+connection_bottom = true
+connection_left = false
+
+[sub_resource type="Resource" id="9"]
+script = ExtResource("2")
+cell_type = 0
+connection_up = false
+connection_right = false
+connection_bottom = false
+connection_left = false
+
+[resource]
+script = ExtResource("1")
+width = 3
+height = 3
+cells = Array[Resource]([SubResource("1"), SubResource("2"), SubResource("3"), SubResource("4"), SubResource("5"), SubResource("6"), SubResource("7"), SubResource("8"), SubResource("9")])
+room_name = "T-Room"

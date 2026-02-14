@@ -8,6 +8,7 @@ extends Node2D
 @export var draw_connections: bool = true
 
 var generator: DungeonGenerator
+var cached_cell_count: int = 0
 
 
 func _ready() -> void:
@@ -36,6 +37,7 @@ func _generate_and_visualize() -> void:
 
 func _on_generation_complete(success: bool, room_count: int, cell_count: int) -> void:
 	print("Dungeon generation complete. Success: ", success, ", Rooms: ", room_count, ", Cells: ", cell_count)
+	cached_cell_count = cell_count
 	queue_redraw()
 
 
@@ -112,17 +114,9 @@ func _draw_statistics(bounds: Rect2i) -> void:
 	var font = ThemeDB.fallback_font
 	var font_size = 14
 	
-	var cell_count = 0
-	for placement in generator.placed_rooms:
-		for y in range(placement.room.height):
-			for x in range(placement.room.width):
-				var cell = placement.room.get_cell(x, y)
-				if cell != null:
-					cell_count += 1
-	
 	var stats = [
 		"Rooms: %d" % generator.placed_rooms.size(),
-		"Cells: %d / %d" % [cell_count, generator.target_meta_cell_count],
+		"Cells: %d / %d" % [cached_cell_count, generator.target_meta_cell_count],
 		"Bounds: %d x %d" % [bounds.size.x, bounds.size.y],
 		"Seed: %d" % generator.generation_seed
 	]

@@ -279,9 +279,9 @@ func _walker_try_place_room(walker: Walker) -> bool:
 func _respawn_walker(walker: Walker) -> void:
 	# 50% chance to spawn at current position if it has open connections
 	# 50% chance to spawn at a random other room
-	var spawn_at_current = randf() < 0.5
+	var should_spawn_at_current_position = randf() < 0.5
 	
-	if spawn_at_current and not _get_open_connections(walker.current_room).is_empty():
+	if should_spawn_at_current_position and not _get_open_connections(walker.current_room).is_empty():
 		# Spawn at current position
 		walker.rooms_placed = 0
 		walker.is_alive = true
@@ -489,7 +489,7 @@ func _place_room(placement: PlacedRoom) -> void:
 ## If both have connections in opposite directions, removes those connections to create a solid wall
 ## Returns the direction of the new cell that was connected, or -1 if no connection was made
 func _merge_overlapping_cells(existing_cell: MetaCell, new_cell: MetaCell, local_x: int, local_y: int, new_placement: PlacedRoom) -> int:
-	var potentialDoor := false
+	var potential_door := false
 	var connected_direction: int = -1
 	
 	# Check for opposite-facing connections and remove them
@@ -497,28 +497,28 @@ func _merge_overlapping_cells(existing_cell: MetaCell, new_cell: MetaCell, local
 	if existing_cell.connection_left and new_cell.connection_right:
 		existing_cell.connection_left = false
 		new_cell.connection_right = false
-		potentialDoor = true
+		potential_door = true
 		connected_direction = MetaCell.Direction.RIGHT
 	elif existing_cell.connection_right and new_cell.connection_left:
 		existing_cell.connection_right = false
 		new_cell.connection_left = false
-		potentialDoor = true
+		potential_door = true
 		connected_direction = MetaCell.Direction.LEFT
 	
 	# Vertical connections (UP-DOWN)
 	if existing_cell.connection_up and new_cell.connection_bottom:
 		existing_cell.connection_up = false
 		new_cell.connection_bottom = false
-		potentialDoor = true
+		potential_door = true
 		connected_direction = MetaCell.Direction.BOTTOM
 	elif existing_cell.connection_bottom and new_cell.connection_up:
 		existing_cell.connection_bottom = false
 		new_cell.connection_up = false
-		potentialDoor = true
+		potential_door = true
 		connected_direction = MetaCell.Direction.UP
 	
 	# Ensure both cells remain blocked or become doors
-	if potentialDoor:
+	if potential_door:
 		existing_cell.cell_type = MetaCell.CellType.DOOR
 		new_cell.cell_type = MetaCell.CellType.DOOR
 	else:

@@ -181,7 +181,7 @@ func generate() -> bool:
 			failed_placement_streak += 1
 			
 			# If we've failed to place rooms for num_walkers consecutive iterations,
-			# all templates are likely exhausted - terminate early
+			# all templates are exhausted - terminate early
 			if failed_placement_streak >= num_walkers:
 				print("DungeonGenerator: All room templates exhausted. Stopping generation.")
 				print("  Templates available: ", room_templates.size())

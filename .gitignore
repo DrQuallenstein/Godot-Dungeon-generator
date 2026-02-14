@@ -19,3 +19,6 @@ mono_crash.*.json
 test_*.py
 *.pyc
 __pycache__/
+
+# Summary files
+SUMMARY.txt

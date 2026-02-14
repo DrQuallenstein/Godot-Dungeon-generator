@@ -77,9 +77,6 @@ var occupied_cells: Dictionary = {}  # Vector2i -> PlacedRoom
 ## Active walkers during generation
 var active_walkers: Array[Walker] = []
 
-## Set of room templates that have already been used (to prevent duplicates)
-var used_room_templates: Array[MetaRoom] = []
-
 ## Dictionary tracking connected directions for each placed room
 ## Key: PlacedRoom, Value: Array of connected MetaCell.Direction values
 var room_connected_directions: Dictionary = {}
@@ -123,9 +120,6 @@ func generate() -> bool:
 	if start_room == null:
 		push_error("DungeonGenerator: No rooms with connections found")
 		return false
-	
-	# Mark starting room as used
-	used_room_templates.append(start_room)
 	
 	# Place the first room at origin (clone it to avoid modifying the template)
 	var first_room_clone = start_room.clone()
@@ -183,11 +177,11 @@ func generate() -> bool:
 			failed_placement_streak += 1
 			
 			# If we've failed to place rooms for num_walkers consecutive iterations,
-			# all templates are exhausted - terminate early
+			# all walkers unable to place rooms - terminate early
 			if failed_placement_streak >= num_walkers:
-				print("DungeonGenerator: All room templates exhausted. Stopping generation.")
+				print("DungeonGenerator: No valid room placements possible. Stopping generation.")
 				print("  Templates available: ", room_templates.size())
-				print("  Templates used: ", used_room_templates.size())
+				print("  Rooms placed: ", placed_rooms.size())
 				break
 	
 	var cell_count = _count_total_cells()
@@ -195,8 +189,6 @@ func generate() -> bool:
 	generation_complete.emit(success, placed_rooms.size(), cell_count)
 	
 	print("DungeonGenerator: Generated ", placed_rooms.size(), " rooms with ", cell_count, " cells")
-	if not success and used_room_templates.size() >= room_templates.size():
-		push_warning("DungeonGenerator: Target cell count not reached - all room templates exhausted")
 	return success
 
 
@@ -243,18 +235,15 @@ func _walker_try_place_room(walker: Walker) -> bool:
 	if open_connections.is_empty():
 		return false
 	
-	# Get available (unused) room templates, excluding the walker's current room template
+	# Get available room templates, excluding the walker's current room template
 	var available_templates: Array[MetaRoom] = []
 	for template in room_templates:
-		# Skip if template already used globally
-		if used_room_templates.has(template):
-			continue
 		# Skip if template is the same as walker's current room (prevent consecutive same template)
 		if template == walker.current_room.original_template:
 			continue
 		available_templates.append(template)
 	
-	# If all templates are used, can't place any more rooms
+	# If no templates available (only current room's template exists), can't place any more rooms
 	if available_templates.is_empty():
 		return false
 	
@@ -291,8 +280,6 @@ func _walker_try_place_room(walker: Walker) -> bool:
 				var placement = _try_connect_room(walker.current_room, conn_point, rotated_room, rotation, template)
 				
 				if placement != null:
-					# Mark this template as used
-					used_room_templates.append(template)
 					_place_room(placement)
 					walker.move_to_room(placement)
 					return true
@@ -588,7 +575,6 @@ func clear_dungeon() -> void:
 	placed_rooms.clear()
 	occupied_cells.clear()
 	active_walkers.clear()
-	used_room_templates.clear()
 	room_connected_directions.clear()
 
 

@@ -6,7 +6,9 @@ extends Camera2D
 ## - Mouse Wheel: Zoom in/out
 ## - Middle Mouse Button (or Right Mouse Button): Pan/drag the view
 ## - Plus (+) / Minus (-) keys: Zoom in/out
-## - R key: Reset camera to center
+## - 0 key: Reset camera to center
+## - Touchpad Two-Finger Pan: Pan the view
+## - Touchpad Pinch: Zoom in/out
 
 ## Zoom limits
 @export var min_zoom: float = 0.1
@@ -18,6 +20,10 @@ extends Camera2D
 
 ## Whether to enable panning with right mouse button (in addition to middle button)
 @export var enable_right_button_pan: bool = true
+
+## Touchpad gesture settings
+@export var touchpad_pan_speed: float = 2.0
+@export var touchpad_zoom_speed: float = 0.5
 
 # Internal state
 var _is_panning: bool = false
@@ -61,6 +67,16 @@ func _unhandled_input(event: InputEvent) -> void:
 		if _is_panning:
 			_update_pan(event.position)
 			get_viewport().set_input_as_handled()
+	
+	# Handle touchpad pan gesture (two-finger scroll)
+	elif event is InputEventPanGesture:
+		_handle_touchpad_pan(event.delta)
+		get_viewport().set_input_as_handled()
+	
+	# Handle touchpad pinch gesture (two-finger pinch)
+	elif event is InputEventMagnifyGesture:
+		_handle_touchpad_zoom(event.position, event.factor)
+		get_viewport().set_input_as_handled()
 	
 	# Handle keyboard zoom
 	elif event is InputEventKey and event.pressed:
@@ -127,3 +143,25 @@ func _reset_camera() -> void:
 	position = Vector2(640, 360)  # Default center position
 	zoom = Vector2(1.0, 1.0)
 	print("Camera reset to default position and zoom")
+
+
+func _handle_touchpad_pan(delta: Vector2) -> void:
+	# Pan gesture delta is in screen space
+	# Convert to world space movement (accounting for zoom)
+	var world_delta = delta * touchpad_pan_speed / zoom.x
+	
+	# Apply movement (negative because we're moving the camera, not the content)
+	position -= world_delta
+
+
+func _handle_touchpad_zoom(point: Vector2, factor: float) -> void:
+	# factor > 1.0 means zoom in (pinch out)
+	# factor < 1.0 means zoom out (pinch in)
+	# factor = 1.0 means no change
+	
+	# Convert factor to zoom change
+	# We use log to make the zoom feel more natural
+	var zoom_change = (factor - 1.0) * touchpad_zoom_speed
+	
+	# Apply zoom at the gesture position
+	_zoom_at_point(point, zoom_change)

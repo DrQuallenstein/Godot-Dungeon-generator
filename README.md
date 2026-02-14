@@ -320,6 +320,7 @@ X X X
 - `max_rooms_per_walker`: Max rooms each walker can place before dying (default: 20)
 - `max_placement_attempts_per_room`: Max attempts to place each room (default: 10)
 - `target_meta_cell_count`: Target total cell count to generate (default: 500)
+- `max_iterations`: Maximum generation loop iterations for safety (default: 10000)
 - `generation_seed`: Seed for reproducible generation (0 = random)
 
 ### DungeonVisualizer

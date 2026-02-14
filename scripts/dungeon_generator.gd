@@ -63,6 +63,9 @@ class Walker:
 ## Target total cell count (stop when this many cells are placed)
 @export var target_meta_cell_count: int = 500
 
+## Maximum iterations for the generation loop (safety limit)
+@export var max_iterations: int = 10000
+
 ## List of all placed rooms in the dungeon
 var placed_rooms: Array[PlacedRoom] = []
 
@@ -74,6 +77,8 @@ var active_walkers: Array[Walker] = []
 
 
 ## Signal emitted when generation completes
+## Parameters: success (bool), room_count (int), cell_count (int)
+## Note: cell_count parameter added in multi-walker version
 signal generation_complete(success: bool, room_count: int, cell_count: int)
 
 
@@ -123,7 +128,6 @@ func generate() -> bool:
 	
 	# Main generation loop - continue until target cell count is reached
 	var iterations = 0
-	var max_iterations = 10000  # Safety limit to prevent infinite loops
 	
 	while _count_total_cells() < target_meta_cell_count and iterations < max_iterations:
 		iterations += 1

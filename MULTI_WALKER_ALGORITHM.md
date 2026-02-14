@@ -188,10 +188,11 @@ Continue until cell count >= 500...
 
 ### target_meta_cell_count (default: 500)
 
-- Depends on room sizes
-- 3x3 rooms: ~9 cells each → 500 cells ≈ 55 rooms
-- 5x5 rooms: ~25 cells each → 500 cells ≈ 20 rooms
-- Mixed sizes: Varies
+- Depends on room sizes and actual cell content
+- 3x3 rooms with ~7-8 non-null cells: 500 cells ≈ 60-70 rooms
+- 5x5 rooms with ~20-23 non-null cells: 500 cells ≈ 22-25 rooms
+- Mixed sizes: Varies based on room composition
+- Note: Rooms may have null cells or blocked edges affecting total count
 
 ## Advantages Over Single Walker
 

@@ -403,13 +403,13 @@ func _update_cell_button(btn: Button, cell: MetaCell, x: int, y: int) -> void:
 	# Add connection indicators
 	var conn_text = ""
 	if cell.connection_up:
-		conn_text += "↑" if not cell.connection_up_required else "⬆"
+		conn_text += "↑" if not cell.connection_up_required else "↟"
 	if cell.connection_right:
-		conn_text += "→" if not cell.connection_right_required else "⮕"
+		conn_text += "→" if not cell.connection_right_required else "↠"
 	if cell.connection_bottom:
-		conn_text += "↓" if not cell.connection_bottom_required else "⬇"
+		conn_text += "↓" if not cell.connection_bottom_required else "↡"
 	if cell.connection_left:
-		conn_text += "←" if not cell.connection_left_required else "⬅"
+		conn_text += "←" if not cell.connection_left_required else "↞"
 	
 	if conn_text:
 		text += "\n" + conn_text

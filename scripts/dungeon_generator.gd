@@ -83,6 +83,12 @@ class Walker:
 ## Maximum iterations for the generation loop (safety limit)
 @export var max_iterations: int = 10000
 
+## Minimum iterations without progress before breaking (safety limit)
+const MIN_NO_PROGRESS_ITERATIONS: int = 100
+
+## Additional iterations allowed per unit of compactness_bias (0.0-1.0)
+const MAX_NO_PROGRESS_RANGE: int = 400
+
 ## Enable step-by-step visualization mode
 @export var enable_visualization: bool = false
 
@@ -177,7 +183,7 @@ func generate() -> bool:
 	# Main generation loop - continue until target cell count is reached
 	var iterations = 0
 	var iterations_without_progress = 0
-	var last_room_count = placed_rooms.size()
+	var last_room_count = 0  # Track room count to detect progress
 	
 	while _count_total_cells() < target_meta_cell_count and iterations < max_iterations:
 		iterations += 1
@@ -228,7 +234,7 @@ func generate() -> bool:
 			
 			# If no progress for too long, break to prevent infinite loop
 			# Allow more iterations at high compactness_bias since placement is harder
-			var max_no_progress = 100 + int(compactness_bias * 400)
+			var max_no_progress = MIN_NO_PROGRESS_ITERATIONS + int(compactness_bias * MAX_NO_PROGRESS_RANGE)
 			if iterations_without_progress >= max_no_progress:
 				push_warning("DungeonGenerator: Breaking generation - no progress for %d iterations" % iterations_without_progress)
 				break

@@ -222,6 +222,7 @@ This algorithm creates dungeons with:
 - **V** - Toggle step-by-step generation mode
 - **C** - Increase compactness bias (+0.1)
 - **X** - Decrease compactness bias (-0.1)
+- **A** - Toggle all walker paths on/off **(NEW!)**
 - **0-9** - Toggle visibility of individual walker paths (press walker ID number)
 - **Home** - Reset camera to center (changed from 0 key)
 
@@ -234,7 +235,7 @@ The visualizer now shows:
 - **Enhanced Path Trails**: See the complete history of where each walker has been
   - **Wider path lines** (4px default, configurable via `path_line_width`)
   - Path lines connect room centers, not corners
-  - **Dotted lines for teleports**: When a walker jumps to a distant room
+  - **Dotted lines for teleports**: When a walker jumps to a distant room (now properly varied!)
   - Gradient fade effect on older path segments
   - **Return detection**: Thinner lines when walker returns to previously visited room
 - **Step Numbers**: Numbered markers at **every room** the walker visits
@@ -243,6 +244,8 @@ The visualizer now shows:
   - Improved text centering for better readability
 - **Walker Selection UI**: Graphical panel with checkboxes to toggle individual walker paths
   - Color-coded indicators for each walker
+  - **"Toggle All" button**: Quickly enable/disable all walker paths at once **(NEW!)**
+  - **Works during generation**: UI updates when walkers spawn/respawn **(NEW!)**
   - Syncs with keyboard shortcuts (0-9 keys)
   - Located in bottom-left corner
 - **Selective Path Visibility**: Toggle individual walker paths on/off using number keys or UI

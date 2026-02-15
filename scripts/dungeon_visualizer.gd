@@ -186,18 +186,44 @@ func _update_walker_selection_ui() -> void:
 	if checkbox_container == null:
 		return
 	
-	# Clear existing checkboxes
-	for child in checkbox_container.get_children():
-		child.queue_free()
-	walker_checkboxes.clear()
-	
-	# Create a checkbox for each walker
+	# Track which walker IDs we've seen
+	var current_walker_ids: Array = []
 	for walker in generator.active_walkers:
+		current_walker_ids.append(walker.walker_id)
+	
+	# Remove checkboxes for walkers that no longer exist
+	var to_remove: Array = []
+	for walker_id in walker_checkboxes.keys():
+		if walker_id not in current_walker_ids:
+			to_remove.append(walker_id)
+	
+	for walker_id in to_remove:
+		if walker_checkboxes.has(walker_id):
+			var checkbox = walker_checkboxes[walker_id]
+			# Find and remove the parent HBoxContainer
+			if checkbox != null and checkbox.get_parent() != null:
+				var hbox = checkbox.get_parent().get_parent()
+				if hbox != null:
+					hbox.queue_free()
+			walker_checkboxes.erase(walker_id)
+	
+	# Add or update checkboxes for each walker
+	for walker in generator.active_walkers:
+		# If checkbox already exists, just update it
+		if walker_checkboxes.has(walker.walker_id):
+			var checkbox = walker_checkboxes[walker.walker_id]
+			if checkbox != null:
+				# Update checkbox state if needed (but don't trigger signal)
+				if checkbox.button_pressed != visible_walker_paths.get(walker.walker_id, true):
+					checkbox.set_pressed_no_signal(visible_walker_paths.get(walker.walker_id, true))
+			continue
+		
+		# Create new checkbox for new walker
 		var checkbox = CheckBox.new()
 		checkbox.text = "Walker %d" % walker.walker_id
 		checkbox.button_pressed = visible_walker_paths.get(walker.walker_id, true)
 		
-		# Create a color indicator by setting the checkbox modulate
+		# Create a color indicator
 		var indicator = ColorRect.new()
 		indicator.custom_minimum_size = Vector2(16, 16)
 		indicator.color = walker.color
@@ -341,8 +367,8 @@ func _draw_walker_paths(offset: Vector2) -> void:
 			var is_return = visited_positions.has(to_room_pos) and visited_positions[to_room_pos] < i
 			
 			if is_teleport:
-				# Draw dotted line for teleports
-				_draw_dashed_line(from_pos, to_pos, path_color, path_line_width * 0.7, teleport_dash_length, teleport_gap_length)
+				# Draw dotted line for teleports with fixed 2.0 width
+				_draw_dashed_line(from_pos, to_pos, path_color, 2.0, teleport_dash_length, teleport_gap_length)
 			else:
 				# Draw solid line for normal moves
 				var line_width = path_line_width

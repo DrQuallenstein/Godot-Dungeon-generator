@@ -312,10 +312,22 @@ func _walker_try_place_room(walker: Walker) -> bool:
 				var placement = _try_connect_room(walker.current_room, conn_point, rotated_room, rotation, template)
 				
 				if placement != null:
+					# Check if room has required connections and validate them
+					if not rotated_room.required_connections.is_empty():
+						if not _can_satisfy_required_connections(placement):
+							# Cannot satisfy required connections, skip this placement
+							continue
+					
+					# Place the room
 					_place_room(placement)
 					walker.move_to_room(placement)
 					# Emit signal for visualization
 					room_placed.emit(placement, walker)
+					
+					# Handle required connections: place rooms immediately
+					if not rotated_room.required_connections.is_empty():
+						_place_required_connection_rooms(placement, walker)
+					
 					return true
 	
 	return false
@@ -725,3 +737,153 @@ func _get_random_room_with_open_connections_compact() -> PlacedRoom:
 	
 	# Random selection
 	return rooms_with_open[randi() % rooms_with_open.size()]
+
+
+## Checks if a placed room's required connections can be satisfied
+## Returns true if all required connections have space to place a meta-room
+func _can_satisfy_required_connections(placement: PlacedRoom) -> bool:
+	# If no required connections, always satisfied
+	if placement.room.required_connections.is_empty():
+		return true
+	
+	# Get all connection points in the room
+	var all_connections = placement.room.get_connection_points()
+	
+	# Check each required connection direction
+	for required_dir in placement.room.required_connections:
+		# Find a connection point in this direction
+		var found_connection = false
+		for conn_point in all_connections:
+			if conn_point.direction == required_dir:
+				found_connection = true
+				
+				# Get the world position of this connection
+				var conn_world_pos = placement.get_cell_world_pos(conn_point.x, conn_point.y)
+				
+				# Get the position that would be adjacent in the connection direction
+				var adjacent_pos = conn_world_pos + _get_direction_offset(conn_point.direction)
+				
+				# Check if there's already a room at the adjacent position
+				if occupied_cells.has(adjacent_pos):
+					# Already connected - this is fine
+					continue
+				
+				# Check if we can place any room without required connections here
+				var can_place_any_room = false
+				var rooms_without_required = _get_room_templates_without_required_connections()
+				
+				for template in rooms_without_required:
+					# Try all rotations
+					for rotation in RoomRotator.get_all_rotations():
+						var rotated_room = RoomRotator.rotate_room(template, rotation)
+						var test_placement = _try_connect_room(placement, conn_point, rotated_room, rotation, template)
+						
+						if test_placement != null:
+							can_place_any_room = true
+							break
+					
+					if can_place_any_room:
+						break
+				
+				if not can_place_any_room:
+					# Cannot place any room at this required connection
+					return false
+				
+				break
+		
+		if not found_connection:
+			# Required direction has no connection point - this shouldn't happen
+			# but we'll return false to be safe
+			return false
+	
+	return true
+
+
+## Places meta-rooms at all required connections of a placed room
+## Spawns new walkers for each placed room
+func _place_required_connection_rooms(placement: PlacedRoom, original_walker: Walker) -> void:
+	# Get room templates without required connections
+	var available_templates = _get_room_templates_without_required_connections()
+	
+	if available_templates.is_empty():
+		push_warning("No room templates without required connections available")
+		return
+	
+	# Get all connection points in the room
+	var all_connections = placement.room.get_connection_points()
+	
+	# For each required connection direction
+	for required_dir in placement.room.required_connections:
+		# Find connection points in this direction
+		for conn_point in all_connections:
+			if conn_point.direction != required_dir:
+				continue
+			
+			# Get the world position of this connection
+			var conn_world_pos = placement.get_cell_world_pos(conn_point.x, conn_point.y)
+			
+			# Get the position that would be adjacent in the connection direction
+			var adjacent_pos = conn_world_pos + _get_direction_offset(conn_point.direction)
+			
+			# Check if there's already a room at the adjacent position
+			if occupied_cells.has(adjacent_pos):
+				# Already connected - mark as satisfied
+				if not room_connected_directions[placement].has(required_dir):
+					room_connected_directions[placement].append(required_dir)
+				continue
+			
+			# Try to place a room without required connections
+			var placed_successfully = false
+			
+			# Shuffle templates for randomness
+			available_templates.shuffle()
+			
+			for template in available_templates:
+				# Try all rotations
+				var rotations = RoomRotator.get_all_rotations()
+				rotations.shuffle()
+				
+				for rotation in rotations:
+					var rotated_room = RoomRotator.rotate_room(template, rotation)
+					var new_placement = _try_connect_room(placement, conn_point, rotated_room, rotation, template)
+					
+					if new_placement != null:
+						# Place the room
+						_place_room(new_placement)
+						
+						# Mark this required connection as satisfied
+						if not room_connected_directions[placement].has(required_dir):
+							room_connected_directions[placement].append(required_dir)
+						
+						# Emit signal for visualization
+						room_placed.emit(new_placement, original_walker)
+						
+						# Spawn a new walker for this room
+						var new_walker = Walker.new(new_placement, max_rooms_per_walker, next_walker_id)
+						next_walker_id += 1
+						active_walkers.append(new_walker)
+						walker_moved.emit(new_walker, placement.position, new_placement.position)
+						
+						placed_successfully = true
+						break
+				
+				if placed_successfully:
+					break
+			
+			if not placed_successfully:
+				push_warning("Could not place required connection room at direction ", required_dir)
+			
+			# Only handle the first connection point in this direction
+			break
+
+
+## Gets room templates that do not have required connections
+## Returns an array of MetaRoom templates
+func _get_room_templates_without_required_connections() -> Array[MetaRoom]:
+	var result: Array[MetaRoom] = []
+	
+	for template in room_templates:
+		if template.required_connections.is_empty():
+			result.append(template)
+	
+	return result

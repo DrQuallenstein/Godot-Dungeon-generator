@@ -77,3 +77,4 @@ width = 4
 height = 4
 cells = Array[ExtResource("1_wkk4q")]([SubResource("Resource_wkk4q"), SubResource("Resource_wwrgi"), SubResource("Resource_b7u5m"), SubResource("Resource_751ow"), SubResource("Resource_206io"), SubResource("Resource_xw5t3"), SubResource("Resource_4h5rx"), SubResource("Resource_av8j0"), SubResource("Resource_y8vfx"), SubResource("Resource_ds25w"), SubResource("Resource_26kfo"), SubResource("Resource_ucoft"), SubResource("Resource_fak7l"), SubResource("Resource_7vxbf"), SubResource("Resource_14dv0"), SubResource("Resource_7s3po")])
 room_name = "Cross Room Small"
+required_connections = Array[int]([0, 1, 2, 3])

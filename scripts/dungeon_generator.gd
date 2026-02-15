@@ -806,7 +806,8 @@ func _can_satisfy_required_connections(placement: PlacedRoom) -> bool:
 		
 		if not found_connection:
 			# Required direction has no connection point - this shouldn't happen
-			# but we'll return false to be safe
+			# This indicates a configuration error in the room template
+			push_error("Room '", placement.room.room_name, "' has required_connection for direction ", required_dir, " but no connection point exists in that direction")
 			return false
 		
 		if not connection_satisfied:
@@ -820,6 +821,8 @@ func _can_satisfy_required_connections(placement: PlacedRoom) -> bool:
 ## Spawns new walkers for each placed room
 func _place_required_connection_rooms(placement: PlacedRoom, original_walker: Walker) -> void:
 	# Get room templates without required connections
+	# Note: This filtering happens twice (once in validation, once here) but the cost is minimal
+	# compared to the placement logic, and avoids complicating the validation function
 	var available_templates = _get_room_templates_without_required_connections()
 	
 	if available_templates.is_empty():

@@ -24,6 +24,8 @@ var walker_positions: Dictionary = {}  # walker_id -> current position
 var visible_walker_paths: Dictionary = {}  # walker_id -> bool (which paths to show)
 var room_position_cache: Dictionary = {}  # Vector2i -> PlacedRoom (for O(1) lookups)
 var walker_checkboxes: Dictionary = {}  # walker_id -> CheckBox node
+var mouse_position_label: Label  # Label for displaying mouse grid position
+var camera: Camera2D  # Reference to the camera for coordinate conversion
 
 # Constants for text positioning
 const TEXT_VERTICAL_OFFSET_FACTOR = 0.35  # Vertical centering factor for text in circles
@@ -36,6 +38,16 @@ func _ready() -> void:
 	if generator == null:
 		push_error("DungeonVisualizer: Could not find DungeonGenerator node")
 		return
+	
+	# Get reference to camera for coordinate conversion
+	camera = get_node_or_null("../Camera2D")
+	if camera == null:
+		push_warning("DungeonVisualizer: Could not find Camera2D node")
+	
+	# Get reference to mouse position label
+	mouse_position_label = get_node_or_null("../CanvasLayer/MousePositionLabel")
+	if mouse_position_label == null:
+		push_warning("DungeonVisualizer: Could not find MousePositionLabel")
 	
 	# Connect to generation signals
 	generator.generation_complete.connect(_on_generation_complete)
@@ -53,6 +65,39 @@ func _ready() -> void:
 	
 	# Generate dungeon on start
 	_generate_and_visualize()
+
+
+func _process(_delta: float) -> void:
+	# Update mouse position label
+	_update_mouse_position_label()
+
+
+func _update_mouse_position_label() -> void:
+	if mouse_position_label == null or camera == null or generator == null:
+		return
+	
+	if generator.placed_rooms.is_empty():
+		mouse_position_label.text = "Cell: -"
+		return
+	
+	# Get mouse position in screen space
+	var mouse_screen_pos = get_viewport().get_mouse_position()
+	
+	# Convert to world space using camera
+	var mouse_world_pos = camera.get_global_mouse_position()
+	
+	# Calculate the same offset used in _draw()
+	var bounds = generator.get_dungeon_bounds()
+	var offset = -Vector2(bounds.position) * cell_size + Vector2(50, 50)
+	
+	# Convert world position to grid position
+	# Reverse the transformation: world_pos = grid_pos * cell_size + offset
+	# So: grid_pos = (world_pos - offset) / cell_size
+	var grid_pos = (mouse_world_pos - offset) / cell_size
+	var grid_pos_int = Vector2i(int(floor(grid_pos.x)), int(floor(grid_pos.y)))
+	
+	# Update label text
+	mouse_position_label.text = "Cell: (%d, %d)" % [grid_pos_int.x, grid_pos_int.y]
 
 
 func _generate_and_visualize() -> void:

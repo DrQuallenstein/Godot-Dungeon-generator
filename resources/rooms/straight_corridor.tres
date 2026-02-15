@@ -67,4 +67,3 @@ script = ExtResource("1_meta_room")
 height = 5
 cells = Array[ExtResource("2_meta_cell")]([SubResource("Resource_w8o4g"), SubResource("Resource_hx2gh"), SubResource("Resource_17ka3"), SubResource("Resource_iksek"), SubResource("Resource_7hsie"), SubResource("Resource_yt202"), SubResource("Resource_bcgob"), SubResource("Resource_eq2gx"), SubResource("Resource_b6iqp"), SubResource("Resource_fjxu3"), SubResource("Resource_t0vrj"), SubResource("Resource_bwnvv"), SubResource("Resource_wry3r"), SubResource("Resource_wm3p2"), SubResource("Resource_06gs2")])
 room_name = "Straight Corridor"
-required_connections = null

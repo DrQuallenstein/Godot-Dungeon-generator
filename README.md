@@ -425,6 +425,10 @@ X X X
 - **`path_line_width`**: Width of walker path lines in pixels (default: 4.0) **(NEW!)**
 - **`draw_step_numbers`**: Show numbered markers along paths (default: true) **(NEW!)**
 - **`step_number_interval`**: Show step numbers every N steps (default: 5) **(NEW!)**
+- **`teleport_distance_threshold`**: Manhattan distance to consider a move as teleport (default: 10) **(NEW!)**
+- **`teleport_dash_length`**: Length of dashes in teleport lines (default: 10.0) **(NEW!)**
+- **`teleport_gap_length`**: Length of gaps in teleport lines (default: 10.0) **(NEW!)**
+- **`step_marker_radius`**: Radius of step number circle markers (default: 12.0) **(NEW!)**
 
 ## Technical Details
 

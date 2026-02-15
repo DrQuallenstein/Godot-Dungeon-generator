@@ -12,6 +12,10 @@ extends Node2D
 @export var path_line_width: float = 4.0
 @export var draw_step_numbers: bool = true
 @export var step_number_interval: int = 5  # Show number every N steps
+@export var teleport_distance_threshold: int = 10  # Manhattan distance to consider a move as teleport
+@export var teleport_dash_length: float = 10.0  # Length of dashes in teleport lines
+@export var teleport_gap_length: float = 10.0  # Length of gaps in teleport lines
+@export var step_marker_radius: float = 12.0  # Radius of step number circle markers
 
 var generator: DungeonGenerator
 var cached_cell_count: int = 0
@@ -164,7 +168,7 @@ func _draw_walker_paths(offset: Vector2) -> void:
 			
 			if is_teleport:
 				# Draw dotted line for teleports
-				_draw_dashed_line(from_pos, to_pos, path_color, path_line_width * 0.7, 10.0, 10.0)
+				_draw_dashed_line(from_pos, to_pos, path_color, path_line_width * 0.7, teleport_dash_length, teleport_gap_length)
 			else:
 				# Draw solid line for normal moves
 				draw_line(from_pos, to_pos, path_color, path_line_width)
@@ -180,8 +184,8 @@ func _is_teleport_move(from_pos: Vector2i, to_pos: Vector2i) -> bool:
 	var delta = to_pos - from_pos
 	var manhattan_dist = abs(delta.x) + abs(delta.y)
 	# Adjacent rooms have manhattan distance <= max room dimension
-	# For simplicity, if distance > 10, consider it a teleport
-	return manhattan_dist > 10
+	# Use configurable threshold to determine if it's a teleport
+	return manhattan_dist > teleport_distance_threshold
 
 
 ## Draw a dashed/dotted line
@@ -210,7 +214,7 @@ func _draw_step_number(pos: Vector2, step: int, color: Color) -> void:
 	# Draw a small circle background
 	var bg_color = Color.BLACK
 	bg_color.a = 0.7
-	draw_circle(pos, 12, bg_color)
+	draw_circle(pos, step_marker_radius, bg_color)
 	
 	# Draw the step number
 	var text = str(step)

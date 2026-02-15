@@ -176,6 +176,8 @@ func generate() -> bool:
 	
 	# Main generation loop - continue until target cell count is reached
 	var iterations = 0
+	var iterations_without_progress = 0
+	var last_room_count = placed_rooms.size()
 	
 	while _count_total_cells() < target_meta_cell_count and iterations < max_iterations:
 		iterations += 1
@@ -213,12 +215,32 @@ func generate() -> bool:
 			# Check if we've reached target cell count
 			if _count_total_cells() >= target_meta_cell_count:
 				break
+		
+		# Track progress to detect infinite loops
+		var current_room_count = placed_rooms.size()
+		if current_room_count > last_room_count:
+			# Progress was made, reset counter
+			iterations_without_progress = 0
+			last_room_count = current_room_count
+		else:
+			# No progress this iteration
+			iterations_without_progress += 1
+			
+			# If no progress for too long, break to prevent infinite loop
+			# Allow more iterations at high compactness_bias since placement is harder
+			var max_no_progress = 100 + int(compactness_bias * 400)
+			if iterations_without_progress >= max_no_progress:
+				push_warning("DungeonGenerator: Breaking generation - no progress for %d iterations" % iterations_without_progress)
+				break
 	
 	var cell_count = _count_total_cells()
 	var success = cell_count >= target_meta_cell_count
 	generation_complete.emit(success, placed_rooms.size(), cell_count)
 	
-	print("DungeonGenerator: Generated ", placed_rooms.size(), " rooms with ", cell_count, " cells")
+	if not success:
+		print("DungeonGenerator: Generation incomplete - reached ", placed_rooms.size(), " rooms with ", cell_count, " cells (target: ", target_meta_cell_count, " cells)")
+	else:
+		print("DungeonGenerator: Generated ", placed_rooms.size(), " rooms with ", cell_count, " cells")
 	return success
 
 
@@ -328,7 +350,7 @@ func _respawn_walker(walker: Walker) -> void:
 	
 	# 50% chance to spawn at current position if it has open connections
 	# 50% chance to spawn at a random other room
-	var should_spawn_at_current_position = randf() < 0.0
+	var should_spawn_at_current_position = randf() < 0.5
 	
 	if should_spawn_at_current_position and not _get_open_connections(walker.current_room).is_empty():
 		# Spawn at current position

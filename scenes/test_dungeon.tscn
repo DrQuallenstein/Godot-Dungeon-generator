@@ -55,6 +55,7 @@ N - Toggle step numbers
 V - Toggle step-by-step mode
 C - Increase compactness bias (+0.1)
 X - Decrease compactness bias (-0.1)
+A - Toggle all walker paths
 0-9 - Toggle individual walker paths
 
 Camera Controls:
@@ -92,6 +93,10 @@ layout_mode = 2
 layout_mode = 2
 theme_override_font_sizes/font_size = 16
 text = "Walker Path Visibility"
+
+[node name="ToggleAllButton" type="Button" parent="CanvasLayer/WalkerSelectionPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Toggle All"
 
 [node name="HSeparator" type="HSeparator" parent="CanvasLayer/WalkerSelectionPanel/MarginContainer/VBoxContainer"]
 layout_mode = 2

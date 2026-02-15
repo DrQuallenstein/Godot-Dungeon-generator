@@ -328,7 +328,7 @@ func _respawn_walker(walker: Walker) -> void:
 	
 	# 50% chance to spawn at current position if it has open connections
 	# 50% chance to spawn at a random other room
-	var should_spawn_at_current_position = randf() < 0.0
+	var should_spawn_at_current_position = randf() < 0.5
 	
 	if should_spawn_at_current_position and not _get_open_connections(walker.current_room).is_empty():
 		# Spawn at current position

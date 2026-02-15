@@ -43,6 +43,11 @@ func _ready() -> void:
 	generator.walker_moved.connect(_on_walker_moved)
 	generator.generation_step.connect(_on_generation_step)
 	
+	# Connect toggle all button
+	var toggle_all_button = get_node_or_null("../CanvasLayer/WalkerSelectionPanel/MarginContainer/VBoxContainer/ToggleAllButton")
+	if toggle_all_button:
+		toggle_all_button.pressed.connect(_on_toggle_all_pressed)
+	
 	# Initialize visible walker paths (all enabled by default)
 	_initialize_visible_walker_paths()
 	
@@ -81,6 +86,8 @@ func _on_walker_moved(walker: DungeonGenerator.Walker, from_pos: Vector2i, to_po
 	# Track walker position for visualization
 	walker_positions[walker.walker_id] = to_pos
 	_update_walker_count()
+	# Update UI if needed (e.g., if new walker spawned during generation)
+	_update_walker_selection_ui_if_needed()
 	queue_redraw()
 
 
@@ -149,6 +156,35 @@ func _update_walker_selection_ui() -> void:
 		
 		# Connect the toggled signal
 		checkbox.toggled.connect(_on_walker_checkbox_toggled.bind(walker.walker_id))
+
+
+## Update walker selection UI only if walker count changed
+func _update_walker_selection_ui_if_needed() -> void:
+	if walker_checkboxes.size() != generator.active_walkers.size():
+		_update_walker_selection_ui()
+
+
+## Handle toggle all button press
+func _on_toggle_all_pressed() -> void:
+	# Determine if we should enable or disable all
+	# If any are disabled, enable all; otherwise disable all
+	var any_disabled = false
+	for walker_id in visible_walker_paths:
+		if not visible_walker_paths[walker_id]:
+			any_disabled = true
+			break
+	
+	var new_state = any_disabled  # Enable if any disabled, disable if all enabled
+	
+	# Toggle all walker paths
+	for walker_id in visible_walker_paths:
+		visible_walker_paths[walker_id] = new_state
+		# Sync with checkbox if it exists
+		if walker_checkboxes.has(walker_id):
+			walker_checkboxes[walker_id].button_pressed = new_state
+	
+	queue_redraw()
+	print("All walker paths: %s" % ["ON" if new_state else "OFF"])
 
 
 ## Handle walker checkbox toggle
@@ -456,6 +492,9 @@ func _input(event: InputEvent) -> void:
 			generator.compactness_bias = max(0.0, generator.compactness_bias - 0.1)
 			print("Compactness bias: %.1f" % generator.compactness_bias)
 			queue_redraw()
+		elif event.keycode == KEY_A:
+			# Toggle all walker paths
+			_on_toggle_all_pressed()
 		elif event.keycode >= KEY_0 and event.keycode <= KEY_9:
 			# Toggle visibility of specific walker path (0-9)
 			var walker_id = event.keycode - KEY_0

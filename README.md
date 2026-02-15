@@ -235,7 +235,7 @@ The visualizer now shows:
 - **Enhanced Path Trails**: See the complete history of where each walker has been
   - **Wider path lines** (4px default, configurable via `path_line_width`)
   - Path lines connect room centers, not corners
-  - **Dotted lines for teleports**: When a walker jumps to a distant room (now properly varied!)
+  - **Dotted lines for teleports**: Exact detection when walker respawns to different location **(IMPROVED!)**
   - Gradient fade effect on older path segments
   - **Return detection**: Thinner lines when walker returns to previously visited room
 - **Step Numbers**: Numbered markers at **every room** the walker visits
@@ -442,10 +442,11 @@ X X X
 - **`path_line_width`**: Width of walker path lines in pixels (default: 4.0)
 - **`draw_step_numbers`**: Show numbered markers at every room (default: true) **(UPDATED!)**
 - **`draw_return_indicators`**: Highlight when walker returns to visited room (default: true) **(NEW!)**
-- **`teleport_distance_threshold`**: Manhattan distance to consider a move as teleport (default: 10)
 - **`teleport_dash_length`**: Length of dashes in teleport lines (default: 10.0)
 - **`teleport_gap_length`**: Length of gaps in teleport lines (default: 10.0)
 - **`step_marker_radius`**: Radius of step number circle markers (default: 14.0) **(UPDATED!)**
+
+**Note:** `teleport_distance_threshold` has been removed - teleport detection is now exact, not heuristic-based.
 
 ## Technical Details
 

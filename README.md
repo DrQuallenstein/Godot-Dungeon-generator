@@ -66,7 +66,11 @@ A room template consisting of:
 - **Required Connections**: Array of directions that MUST be connected to other rooms
   - Example: A T-room with 3 connections should have `required_connections = [UP, LEFT, RIGHT]`
   - Ensures rooms make logical sense (no T-rooms with only 1 connection used)
+  - **Validation**: Before placing a room with required connections, the generator validates that space is available for meta-rooms at each required connection
+  - **Immediate Placement**: When a room with required connections is placed, the generator immediately places meta-rooms (without required connections) at all required connection points
+  - **Walker Spawning**: A new walker is spawned for each meta-room placed at a required connection, allowing continued exploration from those points
   - Generator prefers placing rooms near those with unsatisfied required connections
+
 
 ### 3. Room Rotation
 The `RoomRotator` class can rotate rooms by 0°, 90°, 180°, or 270°:
@@ -158,8 +162,10 @@ The generator uses a **multi-walker room placement algorithm** that creates more
 5. **Room Placement**:
    - Pick random connection from walker's current room
    - Try random unused template and rotation
+   - **If room has required connections**: Validate that space is available for meta-rooms at each required connection point
    - Check if room can be placed (allowing blocked cell overlaps)
    - If valid, **place the cloned room**, mark template as used, merge overlapping connections
+   - **If room has required connections**: Immediately place meta-rooms (without required connections) at all required connection points and spawn new walkers for each
    - Track which connections got connected for required connection validation
    - Walker moves to the new room
 
@@ -167,6 +173,9 @@ The generator uses a **multi-walker room placement algorithm** that creates more
 
 - **No Duplicate Rooms**: Each room template can only be placed once
 - **Required Connections**: Rooms can specify connections that MUST be used
+  - **Validation**: Space is checked before placement to ensure required connections can be satisfied
+  - **Immediate Fulfillment**: Meta-rooms are placed immediately at required connections
+  - **Cascading Walkers**: New walkers spawn at each required connection to continue generation
 - **Smart Walker Spawning**: Prioritizes rooms with unsatisfied required connections
 - **Multiple Simultaneous Walkers**: 3+ walkers work in parallel for varied layouts
 - **Cell-Count Based**: Stops at target cell count, not room count (more precise control)

@@ -316,7 +316,9 @@ func _walker_try_place_room(walker: Walker) -> bool:
 					if not rotated_room.required_connections.is_empty():
 						if not _can_satisfy_required_connections(placement):
 							# Cannot satisfy required connections, skip this placement
+							print("Skipping room '", rotated_room.room_name, "' - cannot satisfy required connections")
 							continue
+						print("Placing room '", rotated_room.room_name, "' with ", rotated_room.required_connections.size(), " required connections")
 					
 					# Place the room
 					_place_room(placement)
@@ -753,6 +755,8 @@ func _can_satisfy_required_connections(placement: PlacedRoom) -> bool:
 	for required_dir in placement.room.required_connections:
 		# Find a connection point in this direction
 		var found_connection = false
+		var connection_satisfied = false
+		
 		for conn_point in all_connections:
 			if conn_point.direction == required_dir:
 				found_connection = true
@@ -765,8 +769,9 @@ func _can_satisfy_required_connections(placement: PlacedRoom) -> bool:
 				
 				# Check if there's already a room at the adjacent position
 				if occupied_cells.has(adjacent_pos):
-					# Already connected - this is fine
-					continue
+					# Already connected - this connection is satisfied
+					connection_satisfied = true
+					break
 				
 				# Check if we can place any room without required connections here
 				var can_place_any_room = false
@@ -785,15 +790,17 @@ func _can_satisfy_required_connections(placement: PlacedRoom) -> bool:
 					if can_place_any_room:
 						break
 				
-				if not can_place_any_room:
-					# Cannot place any room at this required connection
-					return false
-				
-				break
+				if can_place_any_room:
+					connection_satisfied = true
+					break
 		
 		if not found_connection:
 			# Required direction has no connection point - this shouldn't happen
 			# but we'll return false to be safe
+			return false
+		
+		if not connection_satisfied:
+			# Cannot satisfy this required connection
 			return false
 	
 	return true
@@ -808,6 +815,8 @@ func _place_required_connection_rooms(placement: PlacedRoom, original_walker: Wa
 	if available_templates.is_empty():
 		push_warning("No room templates without required connections available")
 		return
+	
+	print("  Placing required connection rooms for '", placement.room.room_name, "' (", available_templates.size(), " templates available)")
 	
 	# Get all connection points in the room
 	var all_connections = placement.room.get_connection_points()
@@ -828,6 +837,7 @@ func _place_required_connection_rooms(placement: PlacedRoom, original_walker: Wa
 			# Check if there's already a room at the adjacent position
 			if occupied_cells.has(adjacent_pos):
 				# Already connected - mark as satisfied
+				print("    Direction ", required_dir, " already connected")
 				if not room_connected_directions[placement].has(required_dir):
 					room_connected_directions[placement].append(required_dir)
 				continue
@@ -855,6 +865,8 @@ func _place_required_connection_rooms(placement: PlacedRoom, original_walker: Wa
 						if not room_connected_directions[placement].has(required_dir):
 							room_connected_directions[placement].append(required_dir)
 						
+						print("    Placed '", rotated_room.room_name, "' at direction ", required_dir)
+						
 						# Emit signal for visualization
 						room_placed.emit(new_placement, original_walker)
 						
@@ -863,6 +875,7 @@ func _place_required_connection_rooms(placement: PlacedRoom, original_walker: Wa
 						next_walker_id += 1
 						active_walkers.append(new_walker)
 						walker_moved.emit(new_walker, placement.position, new_placement.position)
+						print("    Spawned new walker #", new_walker.walker_id, " at required connection")
 						
 						placed_successfully = true
 						break
@@ -872,6 +885,7 @@ func _place_required_connection_rooms(placement: PlacedRoom, original_walker: Wa
 			
 			if not placed_successfully:
 				push_warning("Could not place required connection room at direction ", required_dir)
+
 			
 			# Only handle the first connection point in this direction
 			break

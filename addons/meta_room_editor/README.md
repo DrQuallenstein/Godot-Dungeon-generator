@@ -26,6 +26,13 @@ Three types of cells available:
 - Visual arrows show active connections on each cell
 - "Clear All Connections" button to remove all connections at once
 
+### Required Connections
+- **NEW!** Specify which connections MUST be connected to other rooms
+- Check the directions (UP, RIGHT, BOTTOM, LEFT) that are required
+- Used by the dungeon generator to ensure rooms like T-shapes and crosses have all their connections properly used
+- Example: A T-room should have LEFT, RIGHT, and BOTTOM checked as required
+- When a room with required connections is placed, the generator automatically places meta-rooms at those connections
+
 ### Room Dimensions
 - Adjust room width and height (1-20 cells)
 - "Resize Room" button to apply new dimensions
@@ -70,7 +77,11 @@ Three types of cells available:
    - Click a connection button (UP/RIGHT/BOTTOM/LEFT)
    - Click edge cells to toggle connections
    - Connections only work on edge cells!
-5. **Test your room**: Save and use it in the dungeon generator
+5. **Set required connections** (optional):
+   - Check the directions that MUST be connected to other rooms
+   - Example: For a T-room, check LEFT, RIGHT, and BOTTOM
+   - This ensures the dungeon generator properly connects these rooms
+6. **Test your room**: Save and use it in the dungeon generator
 
 ## Tips
 
@@ -81,6 +92,12 @@ Three types of cells available:
   - LEFT: cells on x=0
 
 - **Multiple Connections**: A cell can have connections in multiple directions
+
+- **Required Connections**: Use this feature for rooms that need specific connections to make sense
+  - **T-rooms**: Should require 3 connections (e.g., LEFT, RIGHT, BOTTOM)
+  - **Cross rooms**: Should require all 4 connections (UP, RIGHT, BOTTOM, LEFT)
+  - **L-corridors**: Usually don't need required connections (flexible usage)
+  - **Straight corridors**: Can optionally require both ends
 
 - **Save Often**: While changes are auto-saved to the resource, it's good practice to save your scene/project regularly
 

@@ -17,6 +17,7 @@ var height_spinbox: SpinBox
 var resize_button: Button
 var cell_type_buttons: Dictionary = {}
 var connection_buttons: Dictionary = {}
+var required_connection_checkboxes: Dictionary = {}
 
 var _initialized: bool = false
 
@@ -166,6 +167,36 @@ func _setup_ui() -> void:
 	# Separator
 	var sep3 = HSeparator.new()
 	add_child(sep3)
+	
+	# Required Connections section
+	var req_conn_label = Label.new()
+	req_conn_label.text = "Required Connections"
+	req_conn_label.add_theme_font_size_override("font_size", 14)
+	add_child(req_conn_label)
+	
+	var req_conn_info = Label.new()
+	req_conn_info.text = "Connections that MUST be connected to other rooms"
+	req_conn_info.add_theme_font_size_override("font_size", 10)
+	req_conn_info.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
+	add_child(req_conn_info)
+	
+	var req_conn_container = VBoxContainer.new()
+	
+	var directions = ["UP", "RIGHT", "BOTTOM", "LEFT"]
+	for i in range(4):
+		var checkbox = CheckBox.new()
+		checkbox.text = directions[i]
+		# Check if this direction is in required_connections
+		checkbox.button_pressed = (i in meta_room.required_connections)
+		checkbox.toggled.connect(_on_required_connection_toggled.bind(i))
+		req_conn_container.add_child(checkbox)
+		required_connection_checkboxes[i] = checkbox
+	
+	add_child(req_conn_container)
+	
+	# Separator
+	var sep4 = HSeparator.new()
+	add_child(sep4)
 	
 	# Grid label
 	var grid_label = Label.new()
@@ -361,3 +392,19 @@ func _on_clear_all_connections() -> void:
 	
 	_refresh_grid()
 	meta_room.emit_changed()
+
+
+func _on_required_connection_toggled(is_checked: bool, direction: int) -> void:
+	# Update the required_connections array
+	if is_checked:
+		# Add the direction if not already present
+		if not (direction in meta_room.required_connections):
+			meta_room.required_connections.append(direction)
+	else:
+		# Remove the direction if present
+		if direction in meta_room.required_connections:
+			meta_room.required_connections.erase(direction)
+	
+	# Notify that the resource changed
+	meta_room.emit_changed()
+	print("Required connections updated: ", meta_room.required_connections)

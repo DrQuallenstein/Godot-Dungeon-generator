@@ -7,21 +7,12 @@ extends VBoxContainer
 var meta_room: MetaRoom
 var grid_container: GridContainer
 var cell_buttons: Array[Button] = []
-var selected_cell_type: MetaCell.CellType = MetaCell.CellType.FLOOR
-var selected_connection_direction: int = -1  # -1 = none, 0-3 = UP/RIGHT/BOTTOM/LEFT
-
-# Editing mode
-enum EditMode { PAINT, INSPECT }
-var edit_mode: EditMode = EditMode.INSPECT
 
 # UI Elements
 var info_label: Label
 var width_spinbox: SpinBox
 var height_spinbox: SpinBox
 var resize_button: Button
-var cell_type_buttons: Dictionary = {}
-var connection_buttons: Dictionary = {}
-var mode_toggle_button: Button
 
 # Cell properties panel
 var properties_panel: PanelContainer
@@ -138,76 +129,9 @@ func _setup_ui() -> void:
 	var sep2 = HSeparator.new()
 	add_child(sep2)
 	
-	# Cell type selector
-	var type_label = Label.new()
-	type_label.text = "Cell Type Brush"
-	type_label.add_theme_font_size_override("font_size", 14)
-	add_child(type_label)
-	
-	var type_container = HBoxContainer.new()
-	
-	for cell_type in MetaCell.CellType.values():
-		var btn = Button.new()
-		var type_name = MetaCell.CellType.keys()[cell_type]
-		btn.text = type_name
-		btn.toggle_mode = true
-		btn.pressed.connect(_on_cell_type_selected.bind(cell_type))
-		type_container.add_child(btn)
-		cell_type_buttons[cell_type] = btn
-		
-		if cell_type == selected_cell_type:
-			btn.button_pressed = true
-	
-	add_child(type_container)
-	
-	# Connection selector
-	var conn_label = Label.new()
-	conn_label.text = "Connection Brush (toggle on/off)"
-	conn_label.add_theme_font_size_override("font_size", 14)
-	add_child(conn_label)
-	
-	var conn_container = HBoxContainer.new()
-	
-	var directions = ["UP", "RIGHT", "BOTTOM", "LEFT"]
-	for i in range(4):
-		var btn = Button.new()
-		btn.text = directions[i]
-		btn.toggle_mode = true
-		btn.pressed.connect(_on_connection_selected.bind(i))
-		conn_container.add_child(btn)
-		connection_buttons[i] = btn
-	
-	add_child(conn_container)
-	
-	# Clear connections button
-	var clear_conn_btn = Button.new()
-	clear_conn_btn.text = "Clear All Connections"
-	clear_conn_btn.pressed.connect(_on_clear_all_connections)
-	add_child(clear_conn_btn)
-	
-	# Separator
-	var sep3 = HSeparator.new()
-	add_child(sep3)
-	
-	# Edit mode selector
-	var mode_label = Label.new()
-	mode_label.text = "Edit Mode"
-	mode_label.add_theme_font_size_override("font_size", 14)
-	add_child(mode_label)
-	
-	mode_toggle_button = Button.new()
-	mode_toggle_button.text = "Mode: Inspect Cell (Click to view/edit properties)"
-	mode_toggle_button.toggle_mode = false
-	mode_toggle_button.pressed.connect(_on_mode_toggle)
-	add_child(mode_toggle_button)
-	
-	# Separator
-	var sep4 = HSeparator.new()
-	add_child(sep4)
-	
 	# Grid label
 	var grid_label = Label.new()
-	grid_label.text = "Room Grid"
+	grid_label.text = "Room Grid (Click to view/edit cell properties)"
 	grid_label.add_theme_font_size_override("font_size", 14)
 	add_child(grid_label)
 	
@@ -336,18 +260,6 @@ func _setup_properties_panel() -> void:
 	close_button.text = "Close Properties"
 	close_button.pressed.connect(_on_close_properties)
 	prop_vbox.add_child(close_button)
-
-
-func _on_mode_toggle() -> void:
-	if edit_mode == EditMode.PAINT:
-		edit_mode = EditMode.INSPECT
-		mode_toggle_button.text = "Mode: Inspect Cell (Click to view/edit properties)"
-	else:
-		edit_mode = EditMode.PAINT
-		mode_toggle_button.text = "Mode: Paint Cell (Click to apply brush)"
-	
-	# Hide properties panel when switching modes
-	_hide_properties_panel()
 
 
 func _show_properties_panel(x: int, y: int) -> void:
@@ -520,44 +432,8 @@ func _on_cell_clicked(x: int, y: int) -> void:
 	if not cell:
 		return
 	
-	# Handle based on edit mode
-	if edit_mode == EditMode.INSPECT:
-		# Show properties panel for this cell
-		_show_properties_panel(x, y)
-	else:
-		# Paint mode - apply brushes
-		# Apply cell type
-		cell.cell_type = selected_cell_type
-		
-		# Apply connection if one is selected
-		if selected_connection_direction >= 0:
-			var direction = selected_connection_direction as MetaCell.Direction
-			var current = cell.has_connection(direction)
-			cell.set_connection(direction, not current)
-		
-		# Update button appearance
-		var btn_index = y * meta_room.width + x
-		if btn_index < cell_buttons.size():
-			_update_cell_button(cell_buttons[btn_index], cell, x, y)
-		
-		# Notify that the resource changed
-		meta_room.emit_changed()
-
-
-func _on_cell_type_selected(cell_type: MetaCell.CellType) -> void:
-	selected_cell_type = cell_type
-	
-	# Update button states
-	for type in cell_type_buttons:
-		cell_type_buttons[type].button_pressed = (type == cell_type)
-
-
-func _on_connection_selected(direction: int) -> void:
-	selected_connection_direction = direction
-	
-	# Update button states
-	for dir in connection_buttons:
-		connection_buttons[dir].button_pressed = (dir == direction)
+	# Show properties panel for this cell
+	_show_properties_panel(x, y)
 
 
 func _on_resize_pressed() -> void:
@@ -603,18 +479,4 @@ func _create_default_cell() -> MetaCell:
 
 func _on_name_changed(new_name: String) -> void:
 	meta_room.room_name = new_name
-	meta_room.emit_changed()
-
-
-func _on_clear_all_connections() -> void:
-	for y in range(meta_room.height):
-		for x in range(meta_room.width):
-			var cell = meta_room.get_cell(x, y)
-			if cell:
-				cell.connection_up = false
-				cell.connection_right = false
-				cell.connection_bottom = false
-				cell.connection_left = false
-	
-	_refresh_grid()
 	meta_room.emit_changed()

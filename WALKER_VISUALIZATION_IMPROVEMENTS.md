@@ -16,7 +16,7 @@ The walker visualization system has been significantly improved to provide bette
 ### 2. Walker Position at Room Centers
 - **Previous**: Walkers were positioned at the upper-left corner of rooms
 - **Now**: Walkers are positioned at the geometric center of each room
-- **Implementation**: Uses `_get_room_center_pos()` to calculate center based on actual room dimensions
+- **Implementation**: Uses `_get_room_center_grid_pos()` to calculate center based on actual room dimensions
 - **Impact**: More accurate visual representation of walker location
 
 ### 3. Selective Path Visibility
@@ -55,11 +55,11 @@ The walker visualization system has been significantly improved to provide bette
 
 ### New Helper Functions
 
-#### `_get_room_center_pos(room_pos: Vector2i, room: MetaRoom) -> Vector2`
-Calculates the center position of a room based on its dimensions.
+#### `_get_room_center_grid_pos(room_pos: Vector2i, room: MetaRoom) -> Vector2`
+Calculates the center position of a room in grid coordinates (not world/screen coordinates).
 
 #### `_is_teleport_move(from_pos: Vector2i, to_pos: Vector2i) -> bool`
-Determines if a move between two positions is a teleport (non-adjacent).
+Determines if a move between two positions is a teleport (non-adjacent) using Manhattan distance.
 
 #### `_draw_dashed_line(from: Vector2, to: Vector2, color: Color, width: float, dash_length: float, gap_length: float) -> void`
 Draws a dashed/dotted line for visualizing teleports.
@@ -68,10 +68,13 @@ Draws a dashed/dotted line for visualizing teleports.
 Draws a numbered marker at a specific position.
 
 #### `_find_room_at_position(pos: Vector2i) -> DungeonGenerator.PlacedRoom`
-Finds a placed room at a given position.
+Finds a placed room at a given position using O(1) cached dictionary lookup.
 
 #### `_initialize_visible_walker_paths() -> void`
 Initializes the visibility state for all walker paths (all visible by default).
+
+#### `_build_room_position_cache() -> void`
+Builds a position-to-room cache for O(1) room lookups (performance optimization).
 
 ## Keyboard Controls
 

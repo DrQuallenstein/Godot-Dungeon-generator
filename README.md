@@ -55,8 +55,11 @@ A robust, room-based dungeon generator for Godot 4.6 using a multi-walker algori
 ### 1. MetaCell
 Each cell in a room has:
 - **Type**: BLOCKED, FLOOR, or DOOR
-- **Connections**: UP, RIGHT, BOTTOM, LEFT flags
-- Connections indicate where this cell can connect to adjacent rooms
+- **Connections**: UP, RIGHT, BOTTOM, LEFT flags indicating where this cell can connect to adjacent rooms
+- **Required Connection Flags**: Each connection can be marked as required (must be connected during generation)
+  - `connection_up_required`, `connection_right_required`, etc.
+  - Used for enforcing specific connection patterns within individual cells
+  - Visual editor shows required connections with thicker arrows (⬆⮕⬇⬅)
 
 ### 2. MetaRoom
 A room template consisting of:
@@ -243,19 +246,35 @@ See `CAMERA_CONTROLS.md` for detailed camera documentation.
    - Select **New Resource...**
    - Choose **MetaRoom**
    - Save with a descriptive name
-3. The visual editor will appear in the Inspector:
-   - Set room dimensions and click "Resize Room"
-   - Select a cell type (BLOCKED, FLOOR, DOOR)
-   - Click cells to paint them
-   - Select a connection direction (UP, RIGHT, BOTTOM, LEFT)
-   - Click edge cells to toggle connections
-   - **Set Required Connections**: Specify which connections MUST be connected
-     - For a T-room, set required_connections to [UP, LEFT, RIGHT]
-     - For a cross room, set required_connections to [UP, RIGHT, BOTTOM, LEFT]
-     - Leave empty for rooms where any connection is optional
-4. Save and use your new room!
+3. The visual editor will appear in the Inspector with two modes:
 
-See `addons/meta_room_editor/README.md` for detailed editor documentation.
+   **Inspect Mode (Default)**:
+   - Click any cell to view/edit its properties
+   - Properties panel appears showing:
+     - Cell status (BLOCKED/FLOOR/DOOR)
+     - Connection checkboxes for all 4 directions
+     - Required checkboxes to mark connections as mandatory
+   - Make changes and they apply immediately
+   - Visual feedback: required connections shown with thick arrows (⬆⮕⬇⬅)
+   
+   **Paint Mode**:
+   - Click the mode toggle button to switch modes
+   - Select a cell type brush (BLOCKED, FLOOR, DOOR)
+   - Click cells to paint them with the selected type
+   - Select a connection brush (UP, RIGHT, BOTTOM, LEFT)
+   - Click cells to toggle connections
+   - Use "Clear All Connections" to remove all connections
+
+4. **Set Room-Level Required Connections**: 
+   - Use the Inspector's `required_connections` property
+   - Add directions that MUST be connected for the entire room
+   - For a T-room, set required_connections to [UP, LEFT, RIGHT]
+   - For a cross room, set required_connections to [UP, RIGHT, BOTTOM, LEFT]
+   - Leave empty for rooms where any connection is optional
+
+5. Save and use your new room!
+
+See `addons/meta_room_editor/README.md` and `TESTING_REPORT.md` for detailed editor documentation.
 
 **Option 2: Manual Creation**
 

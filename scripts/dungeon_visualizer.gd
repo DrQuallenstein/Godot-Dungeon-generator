@@ -213,7 +213,11 @@ func _update_walker_selection_ui() -> void:
 
 ## Update walker selection UI only if walker count changed
 func _update_walker_selection_ui_if_needed() -> void:
-	if walker_checkboxes.size() != generator.active_walkers.size():
+	# If UI hasn't been built yet (walker_checkboxes is empty but walkers exist), build it
+	if walker_checkboxes.is_empty() and not generator.active_walkers.is_empty():
+		_update_walker_selection_ui()
+	# Otherwise, only update if walker count changed
+	elif walker_checkboxes.size() != generator.active_walkers.size():
 		_update_walker_selection_ui()
 
 
@@ -325,9 +329,11 @@ func _draw_walker_paths(offset: Vector2) -> void:
 			path_color.a = alpha
 			
 			# Get exact teleport information for this segment
+			# teleport_flags[j] indicates whether the move that created path_history[j] was a teleport
+			# So for segment i (from path_history[i] to path_history[i+1]), we use teleport_flags[i+1]
 			var is_teleport = false
-			if i < teleport_flags.size():
-				is_teleport = teleport_flags[i]
+			if i + 1 < teleport_flags.size():
+				is_teleport = teleport_flags[i + 1]
 			
 			# Check if walker is returning to a previously visited room
 			var is_return = visited_positions.has(to_room_pos) and visited_positions[to_room_pos] < i

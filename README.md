@@ -47,7 +47,7 @@ A robust, room-based dungeon generator for Godot 4.6 using a multi-walker algori
 │       ├── straight_corridor.tres    # Straight hallway
 │       └── t_room.tres               # T-shaped room
 └── scenes/
-    └── test_dungeon.tscn      # Test scene with visualizer
+	└── test_dungeon.tscn      # Test scene with visualizer
 ```
 
 ## How It Works
@@ -92,7 +92,7 @@ Room A    +    Room B    =    Combined (5 cells, not 6)
 ■ ■ ■         ■ ■ ■           ■ ■ ■ ■ ■
 ■·→[■]  +  [■]←·■    =     ■·→←·■
 ■ ■ ■         ■ ■ ■           ■ ■ ■ ■ ■
-       [■] = Shared blocked cell (overlap)
+	   [■] = Shared blocked cell (overlap)
 ```
 
 See `ROOM_OVERLAP_SYSTEM.md` for technical details and `ROOM_OVERLAP_EXAMPLES.md` for visual examples.
@@ -325,9 +325,9 @@ add_child(generator)
 
 # Load room templates
 generator.room_templates = [
-    preload("res://resources/rooms/cross_room.tres"),
-    preload("res://resources/rooms/l_corridor.tres"),
-    # ... more rooms
+	preload("res://resources/rooms/cross_room.tres"),
+	preload("res://resources/rooms/l_corridor.tres"),
+	# ... more rooms
 ]
 
 # Configure multi-walker generation
@@ -339,12 +339,12 @@ generator.generation_seed = 12345                  # 0 for random
 
 # Generate
 if generator.generate():
-    # Access generated rooms
-    for placed_room in generator.placed_rooms:
-        var room = placed_room.room
-        var position = placed_room.position
-        var rotation = placed_room.rotation
-        # Use room data to spawn actual game objects
+	# Access generated rooms
+	for placed_room in generator.placed_rooms:
+		var room = placed_room.room
+		var position = placed_room.position
+		var rotation = placed_room.rotation
+		# Use room data to spawn actual game objects
 ```
 
 ### Accessing Generated Dungeon Data
@@ -352,16 +352,16 @@ if generator.generate():
 ```gdscript
 # Get all placed rooms
 for placement in generator.placed_rooms:
-    var room: MetaRoom = placement.room
-    var world_pos: Vector2i = placement.position
-    var rotation: RoomRotator.Rotation = placement.rotation
-    
-    # Iterate cells in the room
-    for y in range(room.height):
-        for x in range(room.width):
-            var cell = room.get_cell(x, y)
-            var cell_world_pos = placement.get_cell_world_pos(x, y)
-            # Spawn tiles, props, enemies, etc.
+	var room: MetaRoom = placement.room
+	var world_pos: Vector2i = placement.position
+	var rotation: RoomRotator.Rotation = placement.rotation
+	
+	# Iterate cells in the room
+	for y in range(room.height):
+		for x in range(room.width):
+			var cell = room.get_cell(x, y)
+			var cell_world_pos = placement.get_cell_world_pos(x, y)
+			# Spawn tiles, props, enemies, etc.
 
 # Get dungeon bounds
 var bounds: Rect2i = generator.get_dungeon_bounds()

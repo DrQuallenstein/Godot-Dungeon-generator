@@ -19,7 +19,7 @@ room_templates = Array[ExtResource("2_b1d4m")]([ExtResource("5"), ExtResource("2
 generation_seed = 2673167376
 num_walkers = 2
 max_rooms_per_walker = 100
-target_meta_cell_count = 2000
+target_meta_cell_count = 380
 enable_visualization = true
 compactness_bias = 0.65
 
@@ -69,43 +69,43 @@ Two-Finger Pan - Pan/scroll view
 Pinch - Zoom in/out"
 
 [node name="WalkerSelectionPanel" type="PanelContainer" parent="CanvasLayer" unique_id=856423901]
+anchors_preset = 1
 anchor_left = 1.0
-anchor_top = 0.0
 anchor_right = 1.0
-anchor_bottom = 0.0
 offset_left = -270.0
 offset_top = 10.0
 offset_right = -10.0
 offset_bottom = 180.0
 grow_horizontal = 0
 
-[node name="MarginContainer" type="MarginContainer" parent="CanvasLayer/WalkerSelectionPanel"]
+[node name="MarginContainer" type="MarginContainer" parent="CanvasLayer/WalkerSelectionPanel" unique_id=1556650244]
 layout_mode = 2
 theme_override_constants/margin_left = 10
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/WalkerSelectionPanel/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/WalkerSelectionPanel/MarginContainer" unique_id=875198577]
 layout_mode = 2
 
-[node name="TitleLabel" type="Label" parent="CanvasLayer/WalkerSelectionPanel/MarginContainer/VBoxContainer"]
+[node name="TitleLabel" type="Label" parent="CanvasLayer/WalkerSelectionPanel/MarginContainer/VBoxContainer" unique_id=518250555]
 layout_mode = 2
 theme_override_font_sizes/font_size = 16
 text = "Walker Path Visibility"
 
-[node name="ToggleAllButton" type="Button" parent="CanvasLayer/WalkerSelectionPanel/MarginContainer/VBoxContainer"]
+[node name="ToggleAllButton" type="Button" parent="CanvasLayer/WalkerSelectionPanel/MarginContainer/VBoxContainer" unique_id=1832083615]
 layout_mode = 2
 text = "Toggle All"
 
-[node name="HSeparator" type="HSeparator" parent="CanvasLayer/WalkerSelectionPanel/MarginContainer/VBoxContainer"]
+[node name="HSeparator" type="HSeparator" parent="CanvasLayer/WalkerSelectionPanel/MarginContainer/VBoxContainer" unique_id=1190523819]
 layout_mode = 2
 
 [node name="WalkerCheckboxContainer" type="VBoxContainer" parent="CanvasLayer/WalkerSelectionPanel/MarginContainer/VBoxContainer" unique_id=724893456]
 layout_mode = 2
 theme_override_constants/separation = 5
 
-[node name="MousePositionLabel" type="Label" parent="CanvasLayer"]
+[node name="MousePositionLabel" type="Label" parent="CanvasLayer" unique_id=751359501]
+anchors_preset = 3
 anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0

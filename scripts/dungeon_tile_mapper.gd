@@ -45,12 +45,12 @@ func _ready() -> void:
 
 
 func _on_generation_complete() -> void:
-	"""Called when dungeon generation is complete."""
+	## Called when dungeon generation is complete.
 	update_tilemap()
 
 
 func update_tilemap() -> void:
-	"""Update the TileMap based on current dungeon state."""
+	## Update the TileMap based on current dungeon state.
 	# Clear existing tiles
 	clear()
 	
@@ -63,7 +63,7 @@ func update_tilemap() -> void:
 
 
 func _render_room(placed_room: DungeonGenerator.PlacedRoom) -> void:
-	"""Render a single room to the TileMap."""
+	## Render a single room to the TileMap.
 	var room: MetaRoom = placed_room.room
 	var room_pos: Vector2i = placed_room.position
 	
@@ -82,7 +82,7 @@ func _render_room(placed_room: DungeonGenerator.PlacedRoom) -> void:
 
 
 func _get_tile_for_cell(cell: MetaCell, room: MetaRoom, x: int, y: int) -> Vector2i:
-	"""Determine which tile to use for a given cell."""
+	## Determine which tile to use for a given cell.
 	
 	# Door cells
 	if cell.cell_type == MetaCell.CellType.DOOR:

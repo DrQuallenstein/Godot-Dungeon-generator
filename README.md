@@ -47,7 +47,7 @@ A robust, room-based dungeon generator for Godot 4.6 using a multi-walker algori
 │       ├── straight_corridor.tres    # Straight hallway
 │       └── t_room.tres               # T-shaped room
 └── scenes/
-    └── test_dungeon.tscn      # Test scene with visualizer
+	└── test_dungeon.tscn      # Test scene with visualizer
 ```
 
 ## How It Works
@@ -92,7 +92,7 @@ Room A    +    Room B    =    Combined (5 cells, not 6)
 ■ ■ ■         ■ ■ ■           ■ ■ ■ ■ ■
 ■·→[■]  +  [■]←·■    =     ■·→←·■
 ■ ■ ■         ■ ■ ■           ■ ■ ■ ■ ■
-       [■] = Shared blocked cell (overlap)
+	   [■] = Shared blocked cell (overlap)
 ```
 
 See `ROOM_OVERLAP_SYSTEM.md` for technical details and `ROOM_OVERLAP_EXAMPLES.md` for visual examples.
@@ -205,7 +205,7 @@ This algorithm creates dungeons with:
    - **Mouse Wheel**: Zoom in/out
    - **Middle/Right Mouse**: Pan/drag the view
    - **+/- Keys**: Zoom in/out
-   - **0 Key**: Reset camera
+   - **Home Key**: Reset camera (changed from 0 key to avoid conflict)
    - **Touchpad Pinch** (MacBook): Zoom in/out
    - **Touchpad Two-Finger Pan** (MacBook): Pan/scroll the view
 
@@ -214,19 +214,50 @@ This algorithm creates dungeons with:
 - **R** - Regenerate dungeon with the same seed
 - **S** - Generate with a new random seed
 
-### Visualization Controls (NEW!)
+### Visualization Controls (Enhanced!)
 
 - **W** - Toggle walker visualization on/off
 - **P** - Toggle path visualization on/off
+- **N** - Toggle step numbers on walker paths on/off
 - **V** - Toggle step-by-step generation mode
 - **C** - Increase compactness bias (+0.1)
 - **X** - Decrease compactness bias (-0.1)
+- **A** - Toggle all walker paths on/off **(NEW!)**
+- **0-9** - Toggle visibility of individual walker paths (press walker ID number)
+- **Home** - Reset camera to center (changed from 0 key)
 
 #### Walker Visualization Features
 
 The visualizer now shows:
 - **Colored Walker Markers**: Each walker has a unique color and displays its ID
-- **Path Trails**: See the complete history of where each walker has been
+  - Walkers are positioned at the **center of rooms** for better visualization
+  - Larger size and thicker outline for improved visibility
+- **Enhanced Path Trails**: See the complete history of where each walker has been
+  - **Wider path lines** (4px default, configurable via `path_line_width`)
+  - Path lines connect room centers, not corners
+  - **Dotted lines for teleports**: Exact detection when walker respawns to different location **(IMPROVED!)**
+  - Gradient fade effect on older path segments
+  - **Return detection**: Thinner lines when walker returns to previously visited room
+- **Step Numbers**: Numbered markers at **every room** the walker visits
+  - Shows the progression of walker movement
+  - **Return indicators**: Different background color (dark red) when returning to visited room
+  - Improved text centering for better readability
+- **Walker Selection UI**: Graphical panel with checkboxes to toggle individual walker paths
+  - Color-coded indicators for each walker
+  - **"Toggle All" button**: Quickly enable/disable all walker paths at once **(NEW!)**
+  - **Works during generation**: UI updates when walkers spawn/respawn **(NEW!)**
+  - Syncs with keyboard shortcuts (0-9 keys)
+  - Located in top-right corner
+- **Mouse Position Display**: Real-time grid coordinates under mouse cursor **(NEW!)**
+  - Shows meta cell position: "Cell: (x, y)"
+  - Located in bottom-right corner
+  - Updates continuously as mouse moves
+  - Accounts for camera zoom and pan
+  - Useful for debugging and navigation
+- **Selective Path Visibility**: Toggle individual walker paths on/off using number keys or UI
+  - Press `0` to toggle walker 0's path, `1` for walker 1, etc.
+  - Click checkboxes in the Walker Path Visibility panel
+  - Helps focus on specific walker behaviors
 - **Live Statistics**: Active walker count, compactness bias, and more
 - **Step-by-Step Mode**: Watch the generation algorithm work in real-time
 
@@ -294,9 +325,9 @@ add_child(generator)
 
 # Load room templates
 generator.room_templates = [
-    preload("res://resources/rooms/cross_room.tres"),
-    preload("res://resources/rooms/l_corridor.tres"),
-    # ... more rooms
+	preload("res://resources/rooms/cross_room.tres"),
+	preload("res://resources/rooms/l_corridor.tres"),
+	# ... more rooms
 ]
 
 # Configure multi-walker generation
@@ -308,12 +339,12 @@ generator.generation_seed = 12345                  # 0 for random
 
 # Generate
 if generator.generate():
-    # Access generated rooms
-    for placed_room in generator.placed_rooms:
-        var room = placed_room.room
-        var position = placed_room.position
-        var rotation = placed_room.rotation
-        # Use room data to spawn actual game objects
+	# Access generated rooms
+	for placed_room in generator.placed_rooms:
+		var room = placed_room.room
+		var position = placed_room.position
+		var rotation = placed_room.rotation
+		# Use room data to spawn actual game objects
 ```
 
 ### Accessing Generated Dungeon Data
@@ -321,16 +352,16 @@ if generator.generate():
 ```gdscript
 # Get all placed rooms
 for placement in generator.placed_rooms:
-    var room: MetaRoom = placement.room
-    var world_pos: Vector2i = placement.position
-    var rotation: RoomRotator.Rotation = placement.rotation
-    
-    # Iterate cells in the room
-    for y in range(room.height):
-        for x in range(room.width):
-            var cell = room.get_cell(x, y)
-            var cell_world_pos = placement.get_cell_world_pos(x, y)
-            # Spawn tiles, props, enemies, etc.
+	var room: MetaRoom = placement.room
+	var world_pos: Vector2i = placement.position
+	var rotation: RoomRotator.Rotation = placement.rotation
+	
+	# Iterate cells in the room
+	for y in range(room.height):
+		for x in range(room.width):
+			var cell = room.get_cell(x, y)
+			var cell_world_pos = placement.get_cell_world_pos(x, y)
+			# Spawn tiles, props, enemies, etc.
 
 # Get dungeon bounds
 var bounds: Rect2i = generator.get_dungeon_bounds()
@@ -406,8 +437,16 @@ X X X
 - `cell_size`: Size of each cell in pixels (default: 32)
 - `draw_grid`: Show grid lines (default: true)
 - `draw_connections`: Show connection indicators (default: true)
-- **`draw_walkers`**: Show active walker markers (default: true) **(NEW!)**
-- **`draw_walker_paths`**: Show walker path trails (default: true) **(NEW!)**
+- **`draw_walkers`**: Show active walker markers (default: true)
+- **`draw_walker_paths`**: Show walker path trails (default: true)
+- **`path_line_width`**: Width of walker path lines in pixels (default: 4.0)
+- **`draw_step_numbers`**: Show numbered markers at every room (default: true) **(UPDATED!)**
+- **`draw_return_indicators`**: Highlight when walker returns to visited room (default: true) **(NEW!)**
+- **`teleport_dash_length`**: Length of dashes in teleport lines (default: 10.0)
+- **`teleport_gap_length`**: Length of gaps in teleport lines (default: 10.0)
+- **`step_marker_radius`**: Radius of step number circle markers (default: 14.0) **(UPDATED!)**
+
+**Note:** `teleport_distance_threshold` has been removed - teleport detection is now exact, not heuristic-based.
 
 ## Technical Details
 

@@ -19,7 +19,7 @@ room_templates = Array[ExtResource("2_b1d4m")]([ExtResource("5"), ExtResource("2
 generation_seed = 2673167376
 num_walkers = 2
 max_rooms_per_walker = 100
-target_meta_cell_count = 2000
+target_meta_cell_count = 380
 enable_visualization = true
 compactness_bias = 0.65
 
@@ -51,16 +51,73 @@ S - Generate with new random seed
 Visualization Controls:
 W - Toggle walker visualization
 P - Toggle path visualization
+N - Toggle step numbers
 V - Toggle step-by-step mode
 C - Increase compactness bias (+0.1)
 X - Decrease compactness bias (-0.1)
+A - Toggle all walker paths
+0-9 - Toggle individual walker paths
 
 Camera Controls:
 Mouse Wheel - Zoom in/out
 Middle Mouse / Right Mouse - Pan/drag view
 +/- Keys - Zoom in/out
-0 Key - Reset camera
+Home Key - Reset camera
 
 Touchpad Controls:
 Two-Finger Pan - Pan/scroll view
 Pinch - Zoom in/out"
+
+[node name="WalkerSelectionPanel" type="PanelContainer" parent="CanvasLayer" unique_id=856423901]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -270.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = 180.0
+grow_horizontal = 0
+
+[node name="MarginContainer" type="MarginContainer" parent="CanvasLayer/WalkerSelectionPanel" unique_id=1556650244]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/WalkerSelectionPanel/MarginContainer" unique_id=875198577]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="CanvasLayer/WalkerSelectionPanel/MarginContainer/VBoxContainer" unique_id=518250555]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Walker Path Visibility"
+
+[node name="ToggleAllButton" type="Button" parent="CanvasLayer/WalkerSelectionPanel/MarginContainer/VBoxContainer" unique_id=1832083615]
+layout_mode = 2
+text = "Toggle All"
+
+[node name="HSeparator" type="HSeparator" parent="CanvasLayer/WalkerSelectionPanel/MarginContainer/VBoxContainer" unique_id=1190523819]
+layout_mode = 2
+
+[node name="WalkerCheckboxContainer" type="VBoxContainer" parent="CanvasLayer/WalkerSelectionPanel/MarginContainer/VBoxContainer" unique_id=724893456]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="MousePositionLabel" type="Label" parent="CanvasLayer" unique_id=751359501]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -200.0
+offset_top = -30.0
+offset_right = -10.0
+offset_bottom = -10.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 1
+theme_override_font_sizes/font_size = 14
+text = "Cell: -"
+horizontal_alignment = 2

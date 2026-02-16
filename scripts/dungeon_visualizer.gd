@@ -102,12 +102,15 @@ func _update_mouse_position_label() -> void:
 
 func _generate_and_visualize() -> void:
 	print("\n=== Generating Dungeon ===")
+	
+	# Clear walker state from previous generation BEFORE starting new generation
+	# This prevents old data from interfering with new generation
+	_clear_walker_state_for_regeneration()
+	
 	var success = await generator.generate()
 	if success:
 		print("Generation successful! Rooms placed: ", generator.placed_rooms.size())
-		# Don't call _initialize_visible_walker_paths() here - it clears walker_teleports!
-		# The function is already called in _ready() to set up empty data structures.
-		# Calling it here would erase all teleport data collected during generation.
+		# Force UI rebuild to show new walkers (don't use conditional update)
 		_update_walker_selection_ui()
 		queue_redraw()
 	else:
@@ -168,6 +171,25 @@ func _initialize_visible_walker_paths() -> void:
 	for walker in generator.active_walkers:
 		visible_walker_paths[walker.walker_id] = true
 		walker_teleports[walker.walker_id] = []
+
+
+## Clear walker state before regeneration to prevent old data from persisting
+func _clear_walker_state_for_regeneration() -> void:
+	# Clear teleport tracking (prevents old teleport data from showing on new generation)
+	walker_teleports.clear()
+	
+	# Clear walker positions (old positions no longer valid)
+	walker_positions.clear()
+	
+	# Clear old walker checkboxes from UI
+	var checkbox_container = get_node_or_null("../CanvasLayer/WalkerSelectionPanel/MarginContainer/VBoxContainer/WalkerCheckboxContainer")
+	if checkbox_container != null:
+		for child in checkbox_container.get_children():
+			child.queue_free()
+	walker_checkboxes.clear()
+	
+	# Keep visible_walker_paths intact - these are user preferences for which paths to show
+	# The user's visibility settings should persist across regenerations
 
 
 ## Build cache of room positions for O(1) lookups

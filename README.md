@@ -19,8 +19,8 @@ A robust, room-based dungeon generator for Godot 4.6 using a multi-walker algori
 - **Connection Matching**: Ensures rooms connect properly with matching door directions
 - **Blocked Cell Overlap**: Rooms share their edge walls for compact, realistic dungeons
 - **Connection Merging**: Opposing connections create solid walls when rooms overlap
-- **Configurable**: Easy to add new room templates and adjust generation parameters
 - **Visual Debug**: Built-in visualizer to see generated dungeons
+- **Tile Rendering**: TileMapLayer integration with pixel art tileset
 - **Camera Controls**: Pan and zoom to explore dungeons at any scale
 
 ## Project Structure
@@ -39,15 +39,19 @@ A robust, room-based dungeon generator for Godot 4.6 using a multi-walker algori
 │   ├── room_rotator.gd        # Static methods for rotating rooms
 │   ├── dungeon_generator.gd   # Main generator using random walk
 │   ├── dungeon_visualizer.gd  # Visual debug renderer
+│   ├── dungeon_tile_mapper.gd # Converts dungeon data to TileMap tiles
 │   └── camera_controller.gd   # Pan and zoom camera controls
 ├── resources/
+│   ├── castle_dungeon_tileset.tres  # TileSet with 32x32 pixel art tiles
 │   └── rooms/
 │       ├── cross_room.tres           # 4-way connection room
 │       ├── l_corridor.tres           # L-shaped corridor
 │       ├── straight_corridor.tres    # Straight hallway
 │       └── t_room.tres               # T-shaped room
+├── assets/
+│   └── castle_dungeon_tileset.png   # 16x8 grid of 32x32 tiles
 └── scenes/
-	└── test_dungeon.tscn      # Test scene with visualizer
+	└── test_dungeon.tscn      # Test scene with visualizer and tilemap
 ```
 
 ## How It Works
@@ -194,6 +198,38 @@ This algorithm creates dungeons with:
 - Fewer dead ends (walkers create loops)
 - Better connectivity (walkers meet and merge)
 - Predictable size (cell count based, not room count)
+
+### 7. Tile Rendering System
+
+The dungeon generator includes a **tile rendering system** that converts the generated MetaCell data into proper pixel art tiles using a TileMapLayer:
+
+#### How It Works:
+
+1. **TileSet Configuration**:
+   - Uses `castle_dungeon_tileset.tres` with 32x32 pixel tiles
+   - Tileset contains 128 tiles in a 16x8 grid
+   - Includes floor, wall, corner, and door tiles
+
+2. **Automatic Rendering**:
+   - The `DungeonTileMapper` script listens for the `generation_complete` signal
+   - Converts each MetaCell to the appropriate tile based on:
+     - Cell type (FLOOR, BLOCKED/wall, DOOR)
+     - Surrounding cells (for wall corners and edges)
+   - Renders to a TileMapLayer positioned behind the debug visualizer
+
+3. **Tile Selection**:
+   - **Floor cells**: Alternates between light and dark floor tiles for variety
+   - **Wall cells**: Smart detection of:
+     - Inner corners (wall with floor cutout)
+     - Outer corners (floor with wall corner)
+     - Side walls (left/right)
+     - Top/bottom walls
+   - **Door cells**: Special door tile at connection points
+
+4. **Visual Result**:
+   - Generates proper pixel art dungeons automatically
+   - Updates in real-time when regenerating (press R or S)
+   - Works seamlessly with the walker visualization system
 
 ## Usage
 

@@ -10,6 +10,8 @@
 [ext_resource type="Script" uid="uid://bnpcxmps3damk" path="res://scripts/camera_controller.gd" id="7"]
 [ext_resource type="Resource" uid="uid://cw1u82peba56v" path="res://resources/rooms/cross_room_small.tres" id="7_u7w57"]
 [ext_resource type="Resource" uid="uid://gme2xlqd47pm" path="res://resources/rooms/cross_room_big.tres" id="8_us072"]
+[ext_resource type="TileSet" uid="uid://cjqk4y8pwt3ej" path="res://resources/castle_dungeon_tileset.tres" id="9_tileset"]
+[ext_resource type="Script" path="res://scripts/dungeon_tile_mapper.gd" id="10_tilemapper"]
 
 [node name="TestDungeon" type="Node2D" unique_id=1865828730]
 
@@ -22,6 +24,10 @@ max_rooms_per_walker = 100
 target_meta_cell_count = 380
 enable_visualization = true
 compactness_bias = 0.65
+
+[node name="TileMapLayer" type="TileMapLayer" parent="."]
+tile_set = ExtResource("9_tileset")
+script = ExtResource("10_tilemapper")
 
 [node name="DungeonVisualizer" type="Node2D" parent="." unique_id=1074786944]
 script = ExtResource("6")

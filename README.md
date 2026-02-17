@@ -441,6 +441,7 @@ X X X
 - `room_templates`: Array of MetaRoom resources to use (each can only be placed once)
 - `num_walkers`: Number of simultaneous walkers (default: 3)
 - `max_rooms_per_walker`: Max rooms each walker can place before dying (default: 20)
+- `max_rooms_per_spawned_walker`: Max rooms each spawned walker (for required connections) can place (default: 3)
 - `max_placement_attempts_per_room`: Max attempts to place each room (default: 10)
 - `target_meta_cell_count`: Target total cell count to generate (default: 500)
 - `max_iterations`: Maximum generation loop iterations for safety (default: 10000)

@@ -79,6 +79,9 @@ class Walker:
 ## Maximum rooms each walker can place before dying
 @export var max_rooms_per_walker: int = 20
 
+## Maximum rooms each spawned walker (for required connections) can place
+@export var max_rooms_per_spawned_walker: int = 3
+
 ## Maximum attempts to place each individual room (tries different templates/rotations)
 @export var max_placement_attempts_per_room: int = 10
 
@@ -413,7 +416,8 @@ func _spawn_walkers_for_required_connections(placement: PlacedRoom) -> void:
 	for required_dir in placement.room.required_connections:
 		if not connected_dirs.has(required_dir):
 			# This required direction is not yet satisfied - spawn a walker
-			var new_walker = Walker.new(placement, max_rooms_per_walker, next_walker_id, required_dir)
+			# Use smaller room limit since this walker has a specific purpose
+			var new_walker = Walker.new(placement, max_rooms_per_spawned_walker, next_walker_id, required_dir)
 			next_walker_id += 1
 			active_walkers.append(new_walker)
 			# Emit signal for visualization (spawn at same position, not a teleport)

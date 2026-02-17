@@ -142,6 +142,9 @@ The generator uses a **multi-walker room placement algorithm** that creates more
    - Tries up to 10 times per room (different unused templates/rotations)
    - If successful, marks template as used, moves to the newly placed room
    - **Directional Preference**: Walkers can have a `next_direction` property that makes them prefer specific directions
+     - When set, the walker prioritizes connections in that direction
+     - Automatically cleared after one use (for next placement attempt)
+     - Falls back to normal behavior if preferred direction unavailable
    - If failed, teleports to a random room with open connections
    - Dies after placing its maximum number of rooms
    - When a walker dies, a new one spawns at a random room with open connections

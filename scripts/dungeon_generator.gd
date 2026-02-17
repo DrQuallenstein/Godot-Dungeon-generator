@@ -417,6 +417,7 @@ func _spawn_walkers_for_required_connections(placement: PlacedRoom) -> void:
 		if not connected_dirs.has(required_dir):
 			# This required direction is not yet satisfied - spawn a walker
 			# Use smaller room limit since this walker has a specific purpose
+			# Parameters: starting_room, max_rooms, walker_id, next_direction
 			var new_walker = Walker.new(placement, max_rooms_per_spawned_walker, next_walker_id, required_dir)
 			next_walker_id += 1
 			active_walkers.append(new_walker)

@@ -425,7 +425,7 @@ func _can_place_room(room: MetaRoom, position: Vector2i) -> bool:
 
 
 ## Validates that all required connections of a connection room can be fulfilled
-## Returns true only if ALL required connections are already connected to normal rooms
+## Returns true only if ALL required connections have normal rooms adjacent
 func _can_fulfill_required_connections(room: MetaRoom, position: Vector2i) -> bool:
 	var required_connections = room.get_required_connection_points()
 	

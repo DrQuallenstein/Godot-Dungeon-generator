@@ -153,18 +153,32 @@ func test_connection_room_placement() -> void:
 	print("  - Connection room has 2 required connections")
 	
 	# Test that the validation method exists and can be called
-	# The L-room at position (3, 0) should have both required connections available
-	# since there's no room blocking those positions
+	# After the fix: The L-room at position (3, 0) should FAIL validation
+	# because there's no normal room at the required connection positions (they're empty)
 	var can_fulfill = generator._can_fulfill_required_connections(l_room, Vector2i(3, 0))
-	assert(can_fulfill, "L-room should be placeable at (3, 0) - all required connections available")
-	print("  ✓ _can_fulfill_required_connections() correctly returns true for valid placement")
+	assert(not can_fulfill, "L-room should NOT be placeable at (3, 0) - required connections point to empty space")
+	print("  ✓ _can_fulfill_required_connections() correctly returns false when adjacent positions are empty")
 	
-	# Test a position where the L-room should NOT be placeable
-	# If we try to place it overlapping with the existing room, it should fail
-	var can_fulfill_bad = generator._can_fulfill_required_connections(l_room, Vector2i(0, 0))
-	# This might succeed or fail depending on the exact room layout, so we just test that it runs
-	print("  ✓ _can_fulfill_required_connections() method works for edge cases")
-	print("    Result at (0, 0): ", can_fulfill_bad)
+	# Now place another normal room to satisfy one of the L-room's required connections
+	var second_normal = normal_room.clone()
+	var second_placement = generator.PlacedRoom.new(
+		second_normal,
+		Vector2i(6, 1),  # Place to the right of where L-room would be
+		0,
+		normal_room
+	)
+	generator.placed_rooms.append(second_placement)
+	
+	# Mark cells as occupied
+	for y in range(second_placement.room.height):
+		for x in range(second_placement.room.width):
+			var world_pos = second_placement.get_cell_world_pos(x, y)
+			generator.occupied_cells[world_pos] = second_placement
+	
+	# Still should fail because only ONE required connection is satisfied (not all)
+	var can_fulfill_partial = generator._can_fulfill_required_connections(l_room, Vector2i(3, 0))
+	assert(not can_fulfill_partial, "L-room should NOT be placeable - only one required connection satisfied")
+	print("  ✓ _can_fulfill_required_connections() correctly requires ALL connections to be satisfied")
 	
 	print()
 

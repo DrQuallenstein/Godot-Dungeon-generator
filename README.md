@@ -210,10 +210,11 @@ The generator uses a **multi-walker room placement algorithm** that creates more
 #### How It Works:
 
 1. **Initialization**:
-   - Start with a random room that has connections
+   - Start with a random **normal room** that has connections (connection rooms are excluded)
    - **Clone it** to avoid modifying the template
    - Place it at the origin (0, 0)
    - Spawn multiple walkers at the first room
+   - Note: Connection rooms (L, T, I) cannot be the starting room as their required connections cannot be fulfilled at the start
 
 2. **Walker Behavior**:
    - Each walker independently tries to place rooms from its current position

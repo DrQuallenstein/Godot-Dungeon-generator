@@ -552,11 +552,15 @@ func _get_direction_offset(direction: MetaCell.Direction) -> Vector2i:
 
 
 ## Gets a random room template that has connections
+## Excludes connection rooms to ensure the starting room is always a normal room
 func _get_random_room_with_connections() -> MetaRoom:
 	var valid_rooms: Array[MetaRoom] = []
 	
 	for template in room_templates:
-		if template.has_connection_points():
+		# Only include rooms that have connections AND are not connection rooms
+		# Connection rooms should not be used as the first room since their
+		# required connections cannot be fulfilled at the start
+		if template.has_connection_points() and not template.is_connection_room():
 			valid_rooms.append(template)
 	
 	if valid_rooms.is_empty():

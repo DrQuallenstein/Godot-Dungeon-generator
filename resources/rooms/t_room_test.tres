@@ -1,0 +1,118 @@
+[gd_resource type="Resource" script_class="MetaRoom" format=3 uid="uid://dqw3k9x4r8m7n"]
+
+[ext_resource type="Script" uid="uid://8fcsrahvylh8" path="res://scripts/meta_room.gd" id="1_meta_room"]
+[ext_resource type="Script" uid="uid://b8mln4ttmne08" path="res://scripts/meta_cell.gd" id="2_meta_cell"]
+
+[sub_resource type="Resource" id="Resource_blocked_00"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_blocked_01"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_door_up"]
+script = ExtResource("2_meta_cell")
+cell_type = 2
+connection_up = true
+connection_required = true
+
+[sub_resource type="Resource" id="Resource_blocked_03"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_blocked_04"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_blocked_10"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_floor_11"]
+script = ExtResource("2_meta_cell")
+cell_type = 1
+
+[sub_resource type="Resource" id="Resource_floor_12"]
+script = ExtResource("2_meta_cell")
+cell_type = 1
+
+[sub_resource type="Resource" id="Resource_floor_13"]
+script = ExtResource("2_meta_cell")
+cell_type = 1
+
+[sub_resource type="Resource" id="Resource_blocked_14"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_door_left"]
+script = ExtResource("2_meta_cell")
+cell_type = 2
+connection_left = true
+connection_required = true
+
+[sub_resource type="Resource" id="Resource_floor_21"]
+script = ExtResource("2_meta_cell")
+cell_type = 1
+
+[sub_resource type="Resource" id="Resource_floor_22"]
+script = ExtResource("2_meta_cell")
+cell_type = 1
+
+[sub_resource type="Resource" id="Resource_floor_23"]
+script = ExtResource("2_meta_cell")
+cell_type = 1
+
+[sub_resource type="Resource" id="Resource_door_right"]
+script = ExtResource("2_meta_cell")
+cell_type = 2
+connection_right = true
+connection_required = true
+
+[sub_resource type="Resource" id="Resource_blocked_30"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_floor_31"]
+script = ExtResource("2_meta_cell")
+cell_type = 1
+
+[sub_resource type="Resource" id="Resource_floor_32"]
+script = ExtResource("2_meta_cell")
+cell_type = 1
+
+[sub_resource type="Resource" id="Resource_floor_33"]
+script = ExtResource("2_meta_cell")
+cell_type = 1
+
+[sub_resource type="Resource" id="Resource_blocked_34"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_blocked_40"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_blocked_41"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_blocked_42"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_blocked_43"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+
+[sub_resource type="Resource" id="Resource_blocked_44"]
+script = ExtResource("2_meta_cell")
+cell_type = 0
+
+[resource]
+script = ExtResource("1_meta_room")
+width = 5
+height = 5
+cells = Array[ExtResource("2_meta_cell")]([SubResource("Resource_blocked_00"), SubResource("Resource_blocked_01"), SubResource("Resource_door_up"), SubResource("Resource_blocked_03"), SubResource("Resource_blocked_04"), SubResource("Resource_blocked_10"), SubResource("Resource_floor_11"), SubResource("Resource_floor_12"), SubResource("Resource_floor_13"), SubResource("Resource_blocked_14"), SubResource("Resource_door_left"), SubResource("Resource_floor_21"), SubResource("Resource_floor_22"), SubResource("Resource_floor_23"), SubResource("Resource_door_right"), SubResource("Resource_blocked_30"), SubResource("Resource_floor_31"), SubResource("Resource_floor_32"), SubResource("Resource_floor_33"), SubResource("Resource_blocked_34"), SubResource("Resource_blocked_40"), SubResource("Resource_blocked_41"), SubResource("Resource_blocked_42"), SubResource("Resource_blocked_43"), SubResource("Resource_blocked_44")])
+room_name = "T-Room Test"
+required_connections = Array[int]([0, 3, 1])

@@ -58,7 +58,8 @@ Comprehensive documentation for understanding and implementing atomic multi-room
 │       ├── cross_room.tres           # 4-way connection room
 │       ├── l_corridor.tres           # L-shaped corridor
 │       ├── straight_corridor.tres    # Straight hallway
-│       └── t_room.tres               # T-shaped room
+│       ├── t_room.tres               # T-shaped room
+│       └── t_room_test.tres          # T-shaped test room (for atomic placement testing)
 └── scenes/
 	└── test_dungeon.tscn      # Test scene with visualizer
 ```

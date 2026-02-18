@@ -69,7 +69,7 @@
 ┌─────────────────────────────────────────────────────────────┐
 │  ROTATED ROOM                                               │
 │  ┌────────────────────────────────────────────┐             │
-│  │ Rotate directions: LEFT→UP, RIGHT→DOWN,    │             │
+│  │ Rotate directions: LEFT→UP, RIGHT→BOTTOM,  │             │
 │  │                    BOTTOM→RIGHT             │             │
 │  │                                            │             │
 │  │ required_connections = [UP, BOTTOM, RIGHT] │  ← Fixed!  │
@@ -129,7 +129,7 @@ LEFT│         │RIGHT (required)
         │
      BOTTOM (required)
 
-required_connections = [UP, LEFT, RIGHT]
+required_connections = [LEFT, RIGHT, BOTTOM]  # As in t_room.tres
 ```
 
 ### After 90° Clockwise Rotation

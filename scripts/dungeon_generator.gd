@@ -371,21 +371,12 @@ func _get_open_connections(placement: PlacedRoom) -> Array[MetaRoom.ConnectionPo
 ## Gets a random placed room that has at least one open connection
 ## Prefers rooms with unsatisfied required connections
 func _get_random_room_with_open_connections() -> PlacedRoom:
-	var rooms_with_unsatisfied: Array[PlacedRoom] = []
 	var rooms_with_open: Array[PlacedRoom] = []
 	
 	for placement in placed_rooms:
 		var open_connections = _get_open_connections(placement)
 		if not open_connections.is_empty():
 			rooms_with_open.append(placement)
-			
-			# Check if this room has unsatisfied required connections
-			if not _are_required_connections_satisfied(placement):
-				rooms_with_unsatisfied.append(placement)
-	
-	# Prefer rooms with unsatisfied required connections (70% chance)
-	if not rooms_with_unsatisfied.is_empty() and randf() < 0.7:
-		return rooms_with_unsatisfied[randi() % rooms_with_unsatisfied.size()]
 	
 	# Otherwise, pick any room with open connections
 	if rooms_with_open.is_empty():
@@ -407,27 +398,6 @@ func _count_total_cells() -> int:
 					total += 1
 	
 	return total
-
-
-## Checks if a placed room's required connections are satisfied
-## Returns true if all required connections are connected to other rooms
-func _are_required_connections_satisfied(placement: PlacedRoom) -> bool:
-	# If no required connections, always satisfied
-	if placement.room.required_connections.is_empty():
-		return true
-	
-	# Get the connected directions for this room
-	var connected_dirs: Array = []
-	if room_connected_directions.has(placement):
-		connected_dirs = room_connected_directions[placement]
-	
-	# Check if all required connections are in the connected list
-	for required_dir in placement.room.required_connections:
-		if not connected_dirs.has(required_dir):
-			return false
-	
-	return true
-
 
 ## Tries to connect a room at the specified connection point
 ## With blocked cell overlap, rooms share their edge cells
@@ -691,21 +661,12 @@ func _sort_connections_by_compactness(from_room: PlacedRoom, connections: Array[
 ## Gets a random room with open connections, preferring rooms closer to the dungeon center
 ## This improves compactness by reducing long teleports
 func _get_random_room_with_open_connections_compact() -> PlacedRoom:
-	var rooms_with_unsatisfied: Array[PlacedRoom] = []
 	var rooms_with_open: Array[PlacedRoom] = []
 	
 	for placement in placed_rooms:
 		var open_connections = _get_open_connections(placement)
 		if not open_connections.is_empty():
 			rooms_with_open.append(placement)
-			
-			# Check if this room has unsatisfied required connections
-			if not _are_required_connections_satisfied(placement):
-				rooms_with_unsatisfied.append(placement)
-	
-	# Prefer rooms with unsatisfied required connections (70% chance)
-	if not rooms_with_unsatisfied.is_empty() and randf() < 0.7:
-		return rooms_with_unsatisfied[randi() % rooms_with_unsatisfied.size()]
 	
 	# Otherwise, pick based on compactness
 	if rooms_with_open.is_empty():

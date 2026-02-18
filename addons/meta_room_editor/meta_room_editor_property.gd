@@ -26,10 +26,7 @@ var prop_conn_up_check: CheckBox
 var prop_conn_right_check: CheckBox
 var prop_conn_bottom_check: CheckBox
 var prop_conn_left_check: CheckBox
-var prop_conn_up_req_check: CheckBox
-var prop_conn_right_req_check: CheckBox
-var prop_conn_bottom_req_check: CheckBox
-var prop_conn_left_req_check: CheckBox
+var prop_conn_req_check: CheckBox
 
 var _initialized: bool = false
 
@@ -204,10 +201,10 @@ func _setup_properties_panel() -> void:
 	prop_conn_up_check.toggled.connect(_on_prop_connection_changed.bind(MetaCell.Direction.UP))
 	up_container.add_child(prop_conn_up_check)
 	
-	prop_conn_up_req_check = CheckBox.new()
-	prop_conn_up_req_check.text = "Required"
-	prop_conn_up_req_check.toggled.connect(_on_prop_connection_required_changed.bind(MetaCell.Direction.UP))
-	up_container.add_child(prop_conn_up_req_check)
+	prop_conn_req_check = CheckBox.new()
+	prop_conn_req_check.text = "Required"
+	prop_conn_req_check.toggled.connect(_on_prop_connection_required_changed.bind(MetaCell.Direction.UP))
+	up_container.add_child(prop_conn_req_check)
 	prop_vbox.add_child(up_container)
 	
 	# RIGHT connection
@@ -218,10 +215,6 @@ func _setup_properties_panel() -> void:
 	prop_conn_right_check.toggled.connect(_on_prop_connection_changed.bind(MetaCell.Direction.RIGHT))
 	right_container.add_child(prop_conn_right_check)
 	
-	prop_conn_right_req_check = CheckBox.new()
-	prop_conn_right_req_check.text = "Required"
-	prop_conn_right_req_check.toggled.connect(_on_prop_connection_required_changed.bind(MetaCell.Direction.RIGHT))
-	right_container.add_child(prop_conn_right_req_check)
 	prop_vbox.add_child(right_container)
 	
 	# BOTTOM connection
@@ -232,10 +225,6 @@ func _setup_properties_panel() -> void:
 	prop_conn_bottom_check.toggled.connect(_on_prop_connection_changed.bind(MetaCell.Direction.BOTTOM))
 	bottom_container.add_child(prop_conn_bottom_check)
 	
-	prop_conn_bottom_req_check = CheckBox.new()
-	prop_conn_bottom_req_check.text = "Required"
-	prop_conn_bottom_req_check.toggled.connect(_on_prop_connection_required_changed.bind(MetaCell.Direction.BOTTOM))
-	bottom_container.add_child(prop_conn_bottom_req_check)
 	prop_vbox.add_child(bottom_container)
 	
 	# LEFT connection
@@ -246,10 +235,6 @@ func _setup_properties_panel() -> void:
 	prop_conn_left_check.toggled.connect(_on_prop_connection_changed.bind(MetaCell.Direction.LEFT))
 	left_container.add_child(prop_conn_left_check)
 	
-	prop_conn_left_req_check = CheckBox.new()
-	prop_conn_left_req_check.text = "Required"
-	prop_conn_left_req_check.toggled.connect(_on_prop_connection_required_changed.bind(MetaCell.Direction.LEFT))
-	left_container.add_child(prop_conn_left_req_check)
 	prop_vbox.add_child(left_container)
 	
 	var sep4 = HSeparator.new()
@@ -278,10 +263,7 @@ func _show_properties_panel(x: int, y: int) -> void:
 	prop_conn_bottom_check.set_pressed_no_signal(cell.connection_bottom)
 	prop_conn_left_check.set_pressed_no_signal(cell.connection_left)
 	
-	prop_conn_up_req_check.set_pressed_no_signal(cell.connection_up_required)
-	prop_conn_right_req_check.set_pressed_no_signal(cell.connection_right_required)
-	prop_conn_bottom_req_check.set_pressed_no_signal(cell.connection_bottom_required)
-	prop_conn_left_req_check.set_pressed_no_signal(cell.connection_left_required)
+	prop_conn_req_check.set_pressed_no_signal(cell.connection_required)
 	
 	properties_panel.visible = true
 	properties_visible = true
@@ -403,13 +385,13 @@ func _update_cell_button(btn: Button, cell: MetaCell, x: int, y: int) -> void:
 	# Add connection indicators
 	var conn_text = ""
 	if cell.connection_up:
-		conn_text += "↑" if not cell.connection_up_required else "↟"
+		conn_text += "↑" if not cell.connection_required else "↟"
 	if cell.connection_right:
-		conn_text += "→" if not cell.connection_right_required else "↠"
+		conn_text += "→" if not cell.connection_required else "↠"
 	if cell.connection_bottom:
-		conn_text += "↓" if not cell.connection_bottom_required else "↡"
+		conn_text += "↓" if not cell.connection_required else "↡"
 	if cell.connection_left:
-		conn_text += "←" if not cell.connection_left_required else "↞"
+		conn_text += "←" if not cell.connection_required else "↞"
 	
 	if conn_text:
 		text += "\n" + conn_text

@@ -101,10 +101,6 @@ var occupied_cells: Dictionary = {}  # Vector2i -> PlacedRoom
 ## Active walkers during generation
 var active_walkers: Array[Walker] = []
 
-## Dictionary tracking connected directions for each placed room
-## Key: PlacedRoom, Value: Array of connected MetaCell.Direction values
-var room_connected_directions: Dictionary = {}
-
 ## Counter for assigning unique walker IDs
 var next_walker_id: int = 0
 
@@ -183,8 +179,6 @@ func generate() -> bool:
 		# Emit step signal for visualization
 		generation_step.emit(iterations, _count_total_cells())
 		
-		var any_room_placed_this_iteration = false
-		
 		# Each walker attempts to place one room
 		for walker in active_walkers:
 			
@@ -196,7 +190,6 @@ func generate() -> bool:
 			if placed:
 				walker.rooms_placed += 1
 				walker.check_death()
-				any_room_placed_this_iteration = true
 				
 				# Emit walker moved signal - this is a normal move, not a teleport
 				walker_moved.emit(walker, old_pos, walker.current_room.position, false)
@@ -220,40 +213,6 @@ func generate() -> bool:
 	
 	print("DungeonGenerator: Generated ", placed_rooms.size(), " rooms with ", cell_count, " cells")
 	return success
-
-
-## Attempts to place the next room connected to the current room
-func _try_place_next_room(current_placement: PlacedRoom) -> PlacedRoom:
-	# Get available connection points from current room
-	var connections = current_placement.room.get_connection_points()
-	if connections.is_empty():
-		return null
-	
-	# Shuffle connections for randomness
-	connections.shuffle()
-	
-	# Try each connection point
-	for conn_point in connections:
-		# Try random room templates
-		var template_indices = range(room_templates.size())
-		template_indices.shuffle()
-		
-		for template_idx in template_indices:
-			var template = room_templates[template_idx]
-			
-			# Try all rotations
-			var rotations = RoomRotator.get_all_rotations()
-			rotations.shuffle()
-			
-			for rotation in rotations:
-				var rotated_room = RoomRotator.rotate_room(template, rotation)
-				var placement = _try_connect_room(current_placement, conn_point, rotated_room, rotation, template)
-				
-				if placement != null:
-					return placement
-	
-	return null
-
 
 ## Walker attempts to place a room from its current position
 ## Returns true if a room was successfully placed
@@ -475,9 +434,6 @@ func _get_cell_at_world_pos(placement: PlacedRoom, world_pos: Vector2i) -> MetaC
 func _place_room(placement: PlacedRoom) -> void:
 	placed_rooms.append(placement)
 	
-	# Initialize connection tracking for this room
-	room_connected_directions[placement] = []
-	
 	# Mark cells as occupied and handle overlaps
 	for y in range(placement.room.height):
 		for x in range(placement.room.width):
@@ -496,12 +452,7 @@ func _place_room(placement: PlacedRoom) -> void:
 				if cell.cell_type == MetaCell.CellType.BLOCKED and existing_cell != null and existing_cell.cell_type == MetaCell.CellType.BLOCKED:
 					# Track which direction got connected
 					var connected_dir = _merge_overlapping_cells(existing_cell, cell, x, y, placement)
-					if connected_dir != -1:
-						# Add to both rooms' connected directions
-						if not room_connected_directions[placement].has(connected_dir):
-							room_connected_directions[placement].append(connected_dir)
-						if not room_connected_directions[existing_placement].has(MetaCell.opposite_direction(connected_dir)):
-							room_connected_directions[existing_placement].append(MetaCell.opposite_direction(connected_dir))
+					
 					# Keep the existing placement in occupied_cells (it's already there)
 					continue
 			
@@ -586,7 +537,6 @@ func clear_dungeon() -> void:
 	placed_rooms.clear()
 	occupied_cells.clear()
 	active_walkers.clear()
-	room_connected_directions.clear()
 	next_walker_id = 0
 
 

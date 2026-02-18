@@ -105,6 +105,50 @@ func has_connection_points() -> bool:
 	return not get_connection_points().is_empty()
 
 
+## Returns true if this room is a connection room (has any required connections)
+## Connection rooms are special rooms like L, T, I shapes that must have all their
+## required connections fulfilled when placed
+func is_connection_room() -> bool:
+	for y in range(height):
+		for x in range(width):
+			var cell = get_cell(x, y)
+			# A cell with connection_required should have at least one connection
+			# If connection_required is true but no connections exist, it's a data error
+			if cell != null and cell.connection_required:
+				return true
+	return false
+
+
+## Returns only the connection points that are marked as required
+## These connections must be fulfilled for connection rooms to be placed
+func get_required_connection_points() -> Array[ConnectionPoint]:
+	var required_connections: Array[ConnectionPoint] = []
+	
+	for y in range(height):
+		for x in range(width):
+			var cell = get_cell(x, y)
+			if cell == null or not cell.connection_required:
+				continue
+			
+			# Check UP connection (y = 0)
+			if y == 0 and cell.connection_up:
+				required_connections.append(ConnectionPoint.new(x, y, MetaCell.Direction.UP))
+			
+			# Check RIGHT connection (x = width - 1)
+			if x == width - 1 and cell.connection_right:
+				required_connections.append(ConnectionPoint.new(x, y, MetaCell.Direction.RIGHT))
+			
+			# Check BOTTOM connection (y = height - 1)
+			if y == height - 1 and cell.connection_bottom:
+				required_connections.append(ConnectionPoint.new(x, y, MetaCell.Direction.BOTTOM))
+			
+			# Check LEFT connection (x = 0)
+			if x == 0 and cell.connection_left:
+				required_connections.append(ConnectionPoint.new(x, y, MetaCell.Direction.LEFT))
+	
+	return required_connections
+
+
 ## Creates a deep copy of this room
 func clone() -> MetaRoom:
 	var new_room = MetaRoom.new()

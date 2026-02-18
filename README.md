@@ -68,9 +68,10 @@ A robust, room-based dungeon generator for Godot 4.6 using a multi-walker algori
 Each cell in a room has:
 - **Type**: BLOCKED, FLOOR, or DOOR
 - **Connections**: UP, RIGHT, BOTTOM, LEFT flags indicating where this cell can connect to adjacent rooms
-- **Connection Required Flag**: Optional boolean flag to mark a cell's connection as important
-  - Used for visual editor hints and potential future features
-  - Not currently enforced during generation
+- **Connection Required Flag**: Boolean flag to mark a cell's connection as mandatory
+  - Used for connection rooms (L, T, I shapes) that must have all required connections fulfilled
+  - Enforced during generation - connection rooms are only placed when all required connections can be satisfied
+  - Only normal (non-connection) rooms can satisfy required connections
 
 ### 2. MetaRoom
 A room template consisting of:
@@ -78,6 +79,10 @@ A room template consisting of:
 - Grid of MetaCells
 - Connection points (cells on edges with connections)
 - Optional room name for identification
+- **Connection room classification**: Rooms with required connections are treated as special "connection rooms"
+  - Connection rooms (L, T, I shapes) have cells marked with `connection_required = true`
+  - These rooms are validated during placement to ensure all required connections can be fulfilled
+  - Only normal (non-connection) rooms can connect to required connection points
 
 ### 3. Room Rotation
 The `RoomRotator` class can rotate rooms by 0°, 90°, 180°, or 270°:
@@ -127,7 +132,75 @@ This allows you to safely implement features like:
 - Modifying cell properties during placement
 - Implementing custom room merging logic
 
-### 6. Multi-Walker Dungeon Generation Algorithm
+### 6. Connection Room System
+
+The generator supports special **connection rooms** (like L, T, and I shapes) that require specific connections to be fulfilled:
+
+#### What Are Connection Rooms?
+
+Connection rooms are room templates where certain connections are marked as **required**. These rooms represent corridors or hallways that must connect properly to create valid dungeon layouts.
+
+Examples:
+- **L-shaped corridor**: Requires connections on two perpendicular sides
+- **T-shaped room**: Requires connections on three sides
+- **I-shaped corridor**: Requires connections on opposite sides
+
+#### How It Works
+
+1. **Marking Required Connections**:
+   - In your room template, set `connection_required = true` on cells that must be connected
+   - Use the visual room editor or set manually in the .tres file
+
+2. **Automatic Detection**:
+   - `MetaRoom.is_connection_room()` returns `true` if the room has any required connections
+   - `MetaRoom.get_required_connection_points()` returns only the required connection points
+
+3. **Validation During Placement**:
+   - When placing a connection room, the generator validates that ALL required connections can be fulfilled
+   - Only **normal rooms** (non-connection rooms) are allowed to connect to required connection points
+   - If any required connection cannot be satisfied, the connection room is not placed
+   - The generator tries other positions/rotations until all requirements are met
+
+4. **Benefits**:
+   - Prevents "floating" corridor pieces that don't connect properly
+   - Ensures L/T/I shaped rooms form valid pathways
+   - Normal rooms can still connect to connection rooms on non-required connections
+   - Creates more structurally sound dungeons
+
+#### Example: L-Corridor
+
+```
+■ ■ ■ ■     ← Top edge (no connections)
+■·····[→]   ← RIGHT connection (REQUIRED)
+■·····■
+[↓]···■     ← BOTTOM connection (REQUIRED)
+  ↓
+This L-room requires both RIGHT and BOTTOM connections.
+It will only be placed if both can connect to normal rooms.
+```
+
+#### Implementation Details
+
+The system uses these methods:
+
+```gdscript
+# In MetaRoom.gd
+func is_connection_room() -> bool
+	# Returns true if any cell has connection_required = true
+
+func get_required_connection_points() -> Array[ConnectionPoint]
+	# Returns only connections marked as required
+
+# In DungeonGenerator.gd
+func _can_fulfill_required_connections(room: MetaRoom, position: Vector2i) -> bool
+	# Validates all required connections can be satisfied
+	# Checks that no connection room would block required connections
+	# Returns true only if all requirements can be met
+```
+
+This validation happens automatically during room placement, ensuring structurally valid dungeons without manual intervention.
+
+### 7. Multi-Walker Dungeon Generation Algorithm
 
 The generator uses a **multi-walker room placement algorithm** that creates more organic, interconnected dungeons:
 

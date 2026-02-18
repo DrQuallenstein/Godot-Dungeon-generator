@@ -385,6 +385,11 @@ func _try_connect_room(
 		
 		# Check if room can be placed with allowed overlaps
 		if _can_place_room(to_room, target_pos):
+			# If this is a connection room, validate all required connections can be fulfilled
+			if to_room.is_connection_room():
+				if not _can_fulfill_required_connections(to_room, target_pos):
+					continue  # Try next connection point
+			
 			return PlacedRoom.new(to_room, target_pos, rotation, original_template)
 	
 	return null
@@ -415,6 +420,34 @@ func _can_place_room(room: MetaRoom, position: Vector2i) -> bool:
 			# Non-blocked cells cannot overlap with anything
 			if occupied_cells.has(world_pos):
 				return false
+	
+	return true
+
+
+## Validates that all required connections of a connection room can be fulfilled
+## Returns true if all required connections have available space for normal rooms
+func _can_fulfill_required_connections(room: MetaRoom, position: Vector2i) -> bool:
+	var required_connections = room.get_required_connection_points()
+	
+	# Check each required connection
+	for conn_point in required_connections:
+		var conn_world_pos = position + Vector2i(conn_point.x, conn_point.y)
+		var adjacent_pos = conn_world_pos + _get_direction_offset(conn_point.direction)
+		
+		# If there's already a room at the adjacent position
+		if occupied_cells.has(adjacent_pos):
+			var existing_placement = occupied_cells[adjacent_pos]
+			
+			# Check if the existing room is a connection room
+			# Connection rooms cannot satisfy required connections
+			if existing_placement.room.is_connection_room():
+				return false
+			
+			# Normal room exists, which is fine - the connection will be satisfied
+			continue
+		
+		# No room exists yet - that's okay, a normal room can be placed there later
+		# The space is available for fulfilling this required connection
 	
 	return true
 

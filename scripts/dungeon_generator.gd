@@ -567,8 +567,8 @@ func _unreserve_room_positions(room: MetaRoom, position: Vector2i) -> void:
 
 
 ## Attempts to atomically fill all required connections of a placed connector room
-## Returns true if all required connections were successfully filled
-## If any required connection cannot be filled, returns false and rolls back all placements
+## Returns true if at least one required connection was successfully filled or all are already satisfied
+## Uses best-effort strategy: fills what's possible, leaves rest open for later
 func _fill_required_connections_atomic(connector_placement: PlacedRoom, walker: Walker) -> bool:
 	var required_connections = connector_placement.room.get_required_connection_points()
 	
@@ -580,24 +580,35 @@ func _fill_required_connections_atomic(connector_placement: PlacedRoom, walker: 
 	var placed_rooms_backup: Array[PlacedRoom] = []
 	var reserved_positions_backup: Array[Vector2i] = []
 	
-	# Try to fill each required connection
+	# Track how many connections we could satisfy
+	var connections_satisfied = 0
+	var connections_attempted = 0
+	
+	# Try to fill each required connection (best-effort)
 	for req_conn in required_connections:
 		var conn_world_pos = connector_placement.get_cell_world_pos(req_conn.x, req_conn.y)
 		var adjacent_pos = conn_world_pos + _get_direction_offset(req_conn.direction)
 		
 		# Check if this connection is already properly satisfied with a door
 		if _is_connection_satisfied(connector_placement, req_conn):
-			# Connection already has a proper door - continue
+			# Connection already has a proper door - count as satisfied
+			connections_satisfied += 1
 			continue
+		
+		connections_attempted += 1
 		
 		# Try to place a room at this connection to create the door
 		# Preferably a non-connector room to avoid nested atomicity issues
 		var placed = _try_place_room_at_connection(connector_placement, req_conn, walker, true)
 		
 		if placed == null:
-			# Failed to fill this required connection - rollback everything
-			_rollback_atomic_placement(placed_rooms_backup, reserved_positions_backup)
-			return false
+			# Failed to fill this required connection
+			# CHANGED: Don't rollback everything, just skip this connection
+			# It will remain open for later walkers to fill
+			continue
+		
+		# Successfully placed a room at this connection
+		connections_satisfied += 1
 		
 		# Track this placement for potential rollback
 		placed_rooms_backup.append(placed)
@@ -610,8 +621,7 @@ func _fill_required_connections_atomic(connector_placement: PlacedRoom, walker: 
 				if cell != null and cell.cell_type != MetaCell.CellType.BLOCKED:
 					reserved_positions_backup.append(placed.position + Vector2i(x, y))
 	
-	# All required connections were successfully filled
-	# Actually place all the rooms and unreserve positions
+	# Place all rooms that we successfully created
 	for placed in placed_rooms_backup:
 		_place_room(placed)
 		room_placed.emit(placed, walker)
@@ -620,7 +630,9 @@ func _fill_required_connections_atomic(connector_placement: PlacedRoom, walker: 
 	for pos in reserved_positions_backup:
 		reserved_positions.erase(pos)
 	
-	return true
+	# Success if at least one connection was satisfied (already had door or we filled it)
+	# This allows connectors to be placed even in tight spaces
+	return connections_satisfied > 0
 
 
 ## Rolls back an atomic placement operation

@@ -3,7 +3,7 @@ extends SceneTree
 # Test script to validate rotation functionality
 
 func _init():
-print("=== Testing Room Rotation System ===\n")
+	print("=== Testing Room Rotation System ===\n")
 
 # Test 1: Connection rotation
 test_connection_rotation()

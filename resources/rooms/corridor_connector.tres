@@ -5,7 +5,7 @@
 
 [sub_resource type="Resource" id="cell_left"]
 script = ExtResource("2_cell")
-cell_type = 2
+cell_type = 2  # MetaCell.CellType.DOOR
 connection_up = false
 connection_right = true
 connection_bottom = false
@@ -14,7 +14,7 @@ connection_required = true
 
 [sub_resource type="Resource" id="cell_middle"]
 script = ExtResource("2_cell")
-cell_type = 1
+cell_type = 1  # MetaCell.CellType.FLOOR
 connection_up = false
 connection_right = false
 connection_bottom = false
@@ -23,7 +23,7 @@ connection_required = false
 
 [sub_resource type="Resource" id="cell_right"]
 script = ExtResource("2_cell")
-cell_type = 2
+cell_type = 2  # MetaCell.CellType.DOOR
 connection_up = false
 connection_right = true
 connection_bottom = false

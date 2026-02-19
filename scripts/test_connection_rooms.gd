@@ -154,11 +154,11 @@ func test_connection_room_placement() -> void:
 	print("  - Connection room has 2 required connections")
 	
 	# Test that the validation method exists and can be called
-	# After the fix: The L-room at position (3, 0) should FAIL validation
-	# because there's no normal room at the required connection positions (they're empty)
+	# After Fix #3: When we pass the connecting_via parameter, only OTHER required connections are validated
+	# Without connecting_via: both connections need rooms (should fail)
 	var can_fulfill = generator._can_fulfill_required_connections(l_room, Vector2i(3, 0))
-	assert(not can_fulfill, "L-room should NOT be placeable at (3, 0) - required connections point to empty space")
-	print("  ✓ _can_fulfill_required_connections() correctly returns false when adjacent positions are empty")
+	assert(not can_fulfill, "L-room should NOT be placeable at (3, 0) without connecting_via - both required connections need rooms")
+	print("  ✓ _can_fulfill_required_connections() correctly returns false when no connecting_via is specified")
 	
 	# Now place another normal room to satisfy one of the L-room's required connections
 	var second_normal = normal_room.clone()
@@ -176,10 +176,15 @@ func test_connection_room_placement() -> void:
 			var world_pos = second_placement.get_cell_world_pos(x, y)
 			generator.occupied_cells[world_pos] = second_placement
 	
-	# Still should fail because only ONE required connection is satisfied (not all)
-	var can_fulfill_partial = generator._can_fulfill_required_connections(l_room, Vector2i(3, 0))
-	assert(not can_fulfill_partial, "L-room should NOT be placeable - only one required connection satisfied")
-	print("  ✓ _can_fulfill_required_connections() correctly requires ALL connections to be satisfied")
+	# Now test with connecting_via parameter
+	# If we're connecting via the RIGHT connection, we only need to validate the BOTTOM connection
+	# Create a ConnectionPoint for RIGHT
+	var right_conn = MetaRoom.ConnectionPoint.new(2, 1, MetaCell.Direction.RIGHT)
+	
+	# With connecting_via=RIGHT, only BOTTOM needs to be validated (and it's empty, so should fail)
+	var can_fulfill_with_conn = generator._can_fulfill_required_connections(l_room, Vector2i(3, 0), right_conn)
+	assert(not can_fulfill_with_conn, "L-room should NOT be placeable - BOTTOM connection still empty even with connecting_via")
+	print("  ✓ _can_fulfill_required_connections() correctly validates OTHER required connections when connecting_via is specified")
 	
 	print()
 

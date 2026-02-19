@@ -387,7 +387,7 @@ func _try_connect_room(
 		if _can_place_room(to_room, target_pos):
 			# If this is a connection room, validate all required connections can be fulfilled
 			if to_room.is_connection_room():
-				if not _can_fulfill_required_connections(to_room, target_pos):
+				if not _can_fulfill_required_connections(to_room, target_pos, to_conn):
 					continue  # Try next connection point
 			
 			return PlacedRoom.new(to_room, target_pos, rotation, original_template)
@@ -425,29 +425,61 @@ func _can_place_room(room: MetaRoom, position: Vector2i) -> bool:
 
 
 ## Validates that all required connections of a connection room can be fulfilled
-## Returns true only if ALL required connections have normal rooms adjacent
-func _can_fulfill_required_connections(room: MetaRoom, position: Vector2i) -> bool:
+## Returns true only if ALL required connections (except the one being used to connect) have normal rooms adjacent
+## The connecting_via parameter specifies which connection is being used to connect (will be skipped in validation)
+func _can_fulfill_required_connections(room: MetaRoom, position: Vector2i, connecting_via: MetaRoom.ConnectionPoint = null) -> bool:
 	var required_connections = room.get_required_connection_points()
+	
+	# Debug logging (can be disabled in production)
+	var debug_connection_rooms = false  # Set to true for debugging
+	if debug_connection_rooms and room.room_name.contains("T"):
+		print("\n=== Validating ", room.room_name, " at ", position, " ===")
+		print("Required connections: ", required_connections.size())
+		if connecting_via != null:
+			print("Connecting via: (", connecting_via.x, ", ", connecting_via.y, ") direction ", connecting_via.direction)
 	
 	# Check each required connection
 	for conn_point in required_connections:
+		# Skip the connection we're using to connect - it's automatically fulfilled
+		if connecting_via != null:
+			if conn_point.x == connecting_via.x and conn_point.y == connecting_via.y and conn_point.direction == connecting_via.direction:
+				if debug_connection_rooms and room.room_name.contains("T"):
+					print("  Skipping connection at (", conn_point.x, ", ", conn_point.y, ") dir ", conn_point.direction, " - being used to connect")
+				continue  # This connection is being used to connect, so it's automatically fulfilled
+		
 		var conn_world_pos = position + Vector2i(conn_point.x, conn_point.y)
 		var adjacent_pos = conn_world_pos + _get_direction_offset(conn_point.direction)
+		
+		if debug_connection_rooms and room.room_name.contains("T"):
+			print("  Checking required connection at (", conn_point.x, ", ", conn_point.y, ") dir ", conn_point.direction)
+			print("    World pos: ", conn_world_pos, " → Adjacent: ", adjacent_pos)
 		
 		# Required connections MUST have a normal room already placed at the adjacent position
 		if not occupied_cells.has(adjacent_pos):
 			# No room exists - required connection cannot be fulfilled
+			if debug_connection_rooms and room.room_name.contains("T"):
+				print("    ✗ REJECTED: No room at adjacent position")
 			return false
 		
 		var existing_placement = occupied_cells[adjacent_pos]
 		
+		if debug_connection_rooms and room.room_name.contains("T"):
+			print("    Room found: ", existing_placement.room.room_name, " is_connection=", existing_placement.room.is_connection_room())
+		
 		# Check if the existing room is a connection room
 		# Connection rooms cannot satisfy required connections
 		if existing_placement.room.is_connection_room():
+			if debug_connection_rooms and room.room_name.contains("T"):
+				print("    ✗ REJECTED: Existing room is a connection room")
 			return false
 		
 		# Normal room exists, which is fine - the connection will be satisfied
+		if debug_connection_rooms and room.room_name.contains("T"):
+			print("    ✓ OK: Normal room found")
 		# Continue checking other required connections
+	
+	if debug_connection_rooms and room.room_name.contains("T"):
+		print("  ✓ All required connections validated successfully!")
 	
 	return true
 

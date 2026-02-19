@@ -1,7 +1,7 @@
 extends Node
 
 ## Comprehensive test script to validate connection room logic
-## Run this from Godot command line with: godot --headless --script test_connection_logic.gd
+## Run this from Godot command line with: godot --headless --path . --script test_connection_logic.gd
 
 func _ready():
 	print("=== TESTING CONNECTION ROOM LOGIC ===\n")

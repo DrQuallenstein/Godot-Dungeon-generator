@@ -567,7 +567,9 @@ func _unreserve_room_positions(room: MetaRoom, position: Vector2i) -> void:
 
 
 ## Attempts to fill required connections of a placed connector room using best-effort strategy
-## Returns true if at least one required connection was successfully filled or all are already satisfied
+## Returns true based on room-specific requirements:
+## - Rooms with 3+ required connections (T-rooms): ALL must be filled
+## - Rooms with 2 required connections (I/L-rooms): At least 1 must be filled
 ## Uses best-effort: fills what's possible, leaves unfillable connections open for later walkers
 func _fill_required_connections_atomic(connector_placement: PlacedRoom, walker: Walker) -> bool:
 	var required_connections = connector_placement.room.get_required_connection_points()
@@ -627,9 +629,15 @@ func _fill_required_connections_atomic(connector_placement: PlacedRoom, walker: 
 	for pos in reserved_positions_backup:
 		reserved_positions.erase(pos)
 	
-	# Success if at least one connection was satisfied (already had door or we filled it)
-	# This allows connectors to be placed even in tight spaces
-	return connections_satisfied > 0
+	# Success criteria depends on number of required connections:
+	# - 3+ required (T-rooms): ALL must be satisfied for proper T-shape
+	# - 2 required (I/L-rooms): At least 1 satisfied is acceptable
+	if required_connections.size() >= 3:
+		# Strict: T-rooms and multi-connection rooms need ALL connections
+		return connections_satisfied == required_connections.size()
+	else:
+		# Lenient: I/L-rooms can work with partial connections
+		return connections_satisfied > 0
 
 
 ## Rolls back an atomic placement operation

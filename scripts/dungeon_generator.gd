@@ -585,12 +585,12 @@ func _fill_required_connections_atomic(connector_placement: PlacedRoom, walker: 
 		var conn_world_pos = connector_placement.get_cell_world_pos(req_conn.x, req_conn.y)
 		var adjacent_pos = conn_world_pos + _get_direction_offset(req_conn.direction)
 		
-		# Check if this connection is already satisfied (another room is there)
-		if occupied_cells.has(adjacent_pos):
-			# Connection already filled - continue
+		# Check if this connection is already properly satisfied with a door
+		if _is_connection_satisfied(connector_placement, req_conn):
+			# Connection already has a proper door - continue
 			continue
 		
-		# Try to place a room at this connection
+		# Try to place a room at this connection to create the door
 		# Preferably a non-connector room to avoid nested atomicity issues
 		var placed = _try_place_room_at_connection(connector_placement, req_conn, walker, true)
 		
@@ -713,6 +713,46 @@ func _should_use_atomic_placement(room: MetaRoom, connection_point: MetaRoom.Con
 	# Connectors placed at normal connections need atomic placement
 	# Connectors placed at required connections are part of a parent atomic operation
 	return room.is_connector_piece() and not connection_point.is_required
+
+
+## Checks if a required connection is properly satisfied with a door
+## Returns true if there's a room at the adjacent position with a matching connection
+## and a door has been created (or will be created) between them
+func _is_connection_satisfied(connector_placement: PlacedRoom, conn_point: MetaRoom.ConnectionPoint) -> bool:
+	var conn_world_pos = connector_placement.get_cell_world_pos(conn_point.x, conn_point.y)
+	var adjacent_pos = conn_world_pos + _get_direction_offset(conn_point.direction)
+	
+	# Check if there's a room at the adjacent position
+	if not occupied_cells.has(adjacent_pos):
+		return false
+	
+	# Get the cell from the connector at the connection point
+	var connector_cell = connector_placement.room.get_cell(conn_point.x, conn_point.y)
+	if connector_cell == null:
+		return false
+	
+	# Get the adjacent room and cell
+	var adjacent_placement = occupied_cells[adjacent_pos]
+	var adjacent_cell = _get_cell_at_world_pos(adjacent_placement, adjacent_pos)
+	if adjacent_cell == null:
+		return false
+	
+	# Check if the adjacent cell has a connection in the opposite direction
+	var opposite_dir = MetaCell.opposite_direction(conn_point.direction)
+	if not adjacent_cell.has_connection(opposite_dir):
+		return false
+	
+	# If both cells are blocked and have opposite connections, they form a door
+	# Or if one of them is already a door, the connection is satisfied
+	if connector_cell.cell_type == MetaCell.CellType.DOOR or adjacent_cell.cell_type == MetaCell.CellType.DOOR:
+		return true
+	
+	if connector_cell.cell_type == MetaCell.CellType.BLOCKED and adjacent_cell.cell_type == MetaCell.CellType.BLOCKED:
+		# Both blocked with opposite connections - will form a door
+		return true
+	
+	# Connection is not properly satisfied
+	return false
 
 
 ## Gets the offset vector for a direction

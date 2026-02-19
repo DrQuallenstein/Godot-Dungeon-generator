@@ -724,12 +724,25 @@ func _try_place_room_at_connection(
 	return null
 
 
-## Determines if a room should use atomic placement based on its type and the connection it's placed at
-## Returns true if the room is a connector AND is being placed at a non-required connection
+## Determines if a room should use atomic placement based on its type
+## Returns true if the room is a connector that needs atomic filling
+## T-rooms (3+ required) ALWAYS need atomic placement to ensure all exits connected
+## I/L-rooms (2 required) only need atomic when placed at normal (non-required) connections
 func _should_use_atomic_placement(room: MetaRoom, connection_point: MetaRoom.ConnectionPoint) -> bool:
-	# Connectors placed at normal connections need atomic placement
-	# Connectors placed at required connections are part of a parent atomic operation
-	return room.is_connector_piece() and not connection_point.is_required
+	if not room.is_connector_piece():
+		return false  # Not a connector, no atomic placement needed
+	
+	# Get number of required connections
+	var required_count = room.get_required_connection_points().size()
+	
+	# T-rooms and multi-connection rooms (3+) ALWAYS need atomic placement
+	# This ensures all exits are filled regardless of where the room is placed
+	if required_count >= 3:
+		return true
+	
+	# I/L-rooms (2 required) only need atomic at normal connections
+	# At required connections they're part of parent atomic operation
+	return not connection_point.is_required
 
 
 ## Checks if a required connection is properly satisfied with a door

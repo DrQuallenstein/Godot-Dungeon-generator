@@ -230,10 +230,12 @@ func _walker_try_place_room(walker: Walker) -> bool:
 		return false
 	
 	# Get available room templates, excluding the walker's current room template
+	var current_is_connection_room = walker.current_room.room.is_connection_room()
 	var available_templates: Array[MetaRoom] = []
 	for template in room_templates:
-		# Skip if template is the same as walker's current room (prevent consecutive same template)
-		if template == walker.current_room.original_template:
+		# Skip same template; also skip connection rooms when walker is at a connection room
+		if template == walker.current_room.original_template or \
+				(current_is_connection_room and template.is_connection_room()):
 			continue
 		available_templates.append(template)
 	
@@ -294,10 +296,9 @@ func _walker_try_place_room(walker: Walker) -> bool:
 					for req_conn in required_conns:
 						if req_conn.direction == incoming_dir:
 							continue
-						# Also skip if adjacent position is already occupied by a real room
+						# Skip if border cell is already claimed; rooms connect by overlapping border cells.
 						var conn_world_pos = placement.get_cell_world_pos(req_conn.x, req_conn.y)
-						var adjacent_pos = conn_world_pos + _get_direction_offset(req_conn.direction)
-						if occupied_cells.has(adjacent_pos):
+						if occupied_cells.has(conn_world_pos):
 							continue
 						unsatisfied.append(req_conn)
 					
@@ -632,7 +633,8 @@ func _validate_required_connections_recursive(
 	return true
 
 
-## Finds any room template+rotation that can connect to the given required connection point.
+## Finds a normal (non-connection) room template+rotation that can connect to the given
+## required connection point. Only normal rooms are allowed next to connection rooms.
 ## Returns null if no valid room is found.
 func _find_room_for_required_connection(
 	from_placement: PlacedRoom,
@@ -640,6 +642,9 @@ func _find_room_for_required_connection(
 ) -> PlacedRoom:
 	var rotations = RoomRotator.get_all_rotations()
 	for template in room_templates:
+		# Connection rooms must only connect to normal rooms, never to other connection rooms
+		if template.is_connection_room():
+			continue
 		for rotation in rotations:
 			var rotated = RoomRotator.rotate_room(template, rotation)
 			var candidate = _try_connect_room(from_placement, req_conn, rotated, rotation, template)

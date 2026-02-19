@@ -110,6 +110,11 @@ func get_required_connection_points() -> Array[ConnectionPoint]:
 	return required
 
 
+## Returns true if this room has any cells with connection_required = true (e.g. T, L, I rooms)
+func is_connection_room() -> bool:
+	return not get_required_connection_points().is_empty()
+
+
 ## Returns true if this room has at least one connection point
 func has_connection_points() -> bool:
 	return not get_connection_points().is_empty()

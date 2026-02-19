@@ -293,14 +293,22 @@ func _walker_try_place_room(walker: Walker) -> bool:
 					
 					# Collect required connections that still need a room (excluding incoming)
 					var unsatisfied: Array[MetaRoom.ConnectionPoint] = []
+					var connections_viable := true
 					for req_conn in required_conns:
 						if req_conn.direction == incoming_dir:
 							continue
-						# Skip if border cell is already claimed; rooms connect by overlapping border cells.
 						var conn_world_pos = placement.get_cell_world_pos(req_conn.x, req_conn.y)
 						if occupied_cells.has(conn_world_pos):
-							continue
+							var existing_pl = occupied_cells[conn_world_pos]
+							var existing_c = _get_cell_at_world_pos(existing_pl, conn_world_pos)
+							if existing_c != null and existing_c.has_connection(MetaCell.opposite_direction(req_conn.direction)):
+								continue  # Matching connection present – DOOR will form when placed
+							# Occupied without matching connection – this rotation is not viable
+							connections_viable = false
+							break
 						unsatisfied.append(req_conn)
+					if not connections_viable:
+						continue  # Try next rotation
 					
 					if unsatisfied.is_empty():
 						# All required connections already satisfied
@@ -612,15 +620,22 @@ func _validate_required_connections_recursive(
 			
 			# Collect unsatisfied connections for the new room
 			var new_unsatisfied: Array[MetaRoom.ConnectionPoint] = []
+			var connections_viable := true
 			for new_req_conn in new_required:
 				if new_req_conn.direction == incoming_dir:
 					continue
-				# Skip if already occupied
 				var conn_world_pos = found.get_cell_world_pos(new_req_conn.x, new_req_conn.y)
-				var adjacent_pos = conn_world_pos + _get_direction_offset(new_req_conn.direction)
-				if occupied_cells.has(adjacent_pos):
-					continue
+				if occupied_cells.has(conn_world_pos):
+					var existing_pl = occupied_cells[conn_world_pos]
+					var existing_c = _get_cell_at_world_pos(existing_pl, conn_world_pos)
+					if existing_c != null and existing_c.has_connection(MetaCell.opposite_direction(new_req_conn.direction)):
+						continue  # Matching connection present – DOOR will form when placed
+					# Occupied without matching connection – this chain is not viable
+					connections_viable = false
+					break
 				new_unsatisfied.append(new_req_conn)
+			if not connections_viable:
+				return false
 			
 			# Recursively validate the new room's requirements
 			if not new_unsatisfied.is_empty():
@@ -667,12 +682,13 @@ func _get_direction_offset(direction: MetaCell.Direction) -> Vector2i:
 	return Vector2i.ZERO
 
 
-## Gets a random room template that has connections
+## Gets a random room template that has connections and is not a connection room.
+## Connection rooms (T, L, I) cannot be the starting room.
 func _get_random_room_with_connections() -> MetaRoom:
 	var valid_rooms: Array[MetaRoom] = []
 	
 	for template in room_templates:
-		if template.has_connection_points():
+		if template.has_connection_points() and not template.is_connection_room():
 			valid_rooms.append(template)
 	
 	if valid_rooms.is_empty():

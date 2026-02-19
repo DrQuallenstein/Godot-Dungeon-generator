@@ -7,6 +7,7 @@ func _init():
 	
 	test_t_room_atomic_logic()
 	test_isolation_prevention()
+	test_expected_behavior()
 	
 	print("\n=== All Tests Completed ===")
 	quit()

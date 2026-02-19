@@ -277,8 +277,11 @@ func _walker_try_place_room(walker: Walker) -> bool:
 				
 				if placement != null:
 					# Check if this is a connector room (has required connections)
-					if rotated_room.is_connector_piece():
-						# This is a connector - must atomically fill all required connections
+					# AND if we're placing it at a non-required connection
+					# If placing at a required connection, it's part of a parent atomic operation
+					if rotated_room.is_connector_piece() and not conn_point.is_required:
+						# This is a connector placed at a normal connection
+						# Must atomically fill all its required connections
 						# First, reserve positions for this room
 						_reserve_room_positions(rotated_room, placement.position)
 						
@@ -650,10 +653,36 @@ func _try_place_room_at_connection(
 	if available_templates.is_empty():
 		return null
 	
-	# Try random templates
-	available_templates.shuffle()
+	# Prioritize non-connector rooms when filling required connections
+	# This reduces the chance of cascading unfilled required connections
+	var non_connector_templates: Array[MetaRoom] = []
+	var connector_templates: Array[MetaRoom] = []
 	
 	for template in available_templates:
+		# Check if template is a connector in any rotation
+		var is_connector_in_any_rotation = false
+		for test_rotation in RoomRotator.get_all_rotations():
+			var test_rotated = RoomRotator.rotate_room(template, test_rotation)
+			if test_rotated.is_connector_piece():
+				is_connector_in_any_rotation = true
+				break
+		
+		if is_connector_in_any_rotation:
+			connector_templates.append(template)
+		else:
+			non_connector_templates.append(template)
+	
+	# Shuffle each group for variety
+	non_connector_templates.shuffle()
+	connector_templates.shuffle()
+	
+	# Try non-connector templates first, then connector templates
+	var prioritized_templates: Array[MetaRoom] = []
+	prioritized_templates.append_array(non_connector_templates)
+	prioritized_templates.append_array(connector_templates)
+	
+	# Try templates in prioritized order
+	for template in prioritized_templates:
 		# Try all rotations
 		var rotations = RoomRotator.get_all_rotations()
 		rotations.shuffle()
@@ -661,11 +690,9 @@ func _try_place_room_at_connection(
 		for rotation in rotations:
 			var rotated_room = RoomRotator.rotate_room(template, rotation)
 			
-			# Skip connector templates when filling required connections
-			# This prevents nested atomic operations which could lead to deadlocks
-			# Only non-connector rooms can be used to fill required connections
-			if rotated_room.is_connector_piece():
-				continue
+			# When filling required connections, we can place ANY room including connectors
+			# The connector won't trigger its own atomic placement because it's placed
+			# at a required connection (which is part of the parent atomic operation)
 			
 			var placement = _try_connect_room(
 				from_placement, 

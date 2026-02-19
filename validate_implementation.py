@@ -26,9 +26,9 @@ def validate_meta_room():
     
     patterns = {
         'ConnectionPoint has is_required': r'var is_required:\s*bool',
-        'get_required_connection_points method': 'def get_required_connection_points',
-        'has_required_connections method': 'def has_required_connections',
-        'is_connector_piece method': 'def is_connector_piece',
+        'get_required_connection_points method': 'func get_required_connection_points',
+        'has_required_connections method': 'func has_required_connections',
+        'is_connector_piece method': 'func is_connector_piece',
         'is_required passed to ConnectionPoint.new': r'ConnectionPoint\.new\([^)]*connection_required',
     }
     

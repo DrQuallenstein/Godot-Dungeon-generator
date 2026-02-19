@@ -276,10 +276,8 @@ func _walker_try_place_room(walker: Walker) -> bool:
 				var placement = _try_connect_room(walker.current_room, conn_point, rotated_room, rotation, template)
 				
 				if placement != null:
-					# Check if this is a connector room (has required connections)
-					# AND if we're placing it at a non-required connection
-					# If placing at a required connection, it's part of a parent atomic operation
-					if rotated_room.is_connector_piece() and not conn_point.is_required:
+					# Check if atomic placement is needed
+					if _should_use_atomic_placement(rotated_room, conn_point):
 						# This is a connector placed at a normal connection
 						# Must atomically fill all its required connections
 						# First, reserve positions for this room
@@ -707,6 +705,14 @@ func _try_place_room_at_connection(
 				return placement
 	
 	return null
+
+
+## Determines if a room should use atomic placement based on its type and the connection it's placed at
+## Returns true if the room is a connector AND is being placed at a non-required connection
+func _should_use_atomic_placement(room: MetaRoom, connection_point: MetaRoom.ConnectionPoint) -> bool:
+	# Connectors placed at normal connections need atomic placement
+	# Connectors placed at required connections are part of a parent atomic operation
+	return room.is_connector_piece() and not connection_point.is_required
 
 
 ## Gets the offset vector for a direction

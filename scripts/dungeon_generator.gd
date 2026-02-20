@@ -62,6 +62,18 @@ class Walker:
 		return Color.from_hsv(hue, 0.8, 0.9)
 
 
+## Links a parent room to a child room that was placed to satisfy a required connection
+class RequiredRoomLink:
+	var from: PlacedRoom              ## The room that had the required connection
+	var conn: MetaRoom.ConnectionPoint ## The required connection point used
+	var to: PlacedRoom                ## The room placed to satisfy the connection
+
+	func _init(p_from: PlacedRoom, p_conn: MetaRoom.ConnectionPoint, p_to: PlacedRoom) -> void:
+		from = p_from
+		conn = p_conn
+		to = p_to
+
+
 ## Available room templates to use for generation
 @export var room_templates: Array[MetaRoom] = []
 
@@ -325,7 +337,7 @@ func _walker_try_place_room(walker: Walker) -> bool:
 					var saved_occupied = occupied_cells.duplicate()
 					_simulate_occupied(placement)
 					
-					var additional_rooms: Array[PlacedRoom] = []
+					var additional_rooms: Array[RequiredRoomLink] = []
 					var all_satisfied := true
 					
 					# Recursively validate required connections (with depth limit to prevent infinite loops)
@@ -344,9 +356,10 @@ func _walker_try_place_room(walker: Walker) -> bool:
 					_mark_passage_at_connection(walker.current_room, conn_point, placement)
 					walker.move_to_room(placement)
 					room_placed.emit(placement, walker)
-					for additional in additional_rooms:
-						_place_room(additional)
-						room_placed.emit(additional, walker)
+					for item: RequiredRoomLink in additional_rooms:
+						_place_room(item.to)
+						_mark_passage_at_connection(item.from, item.conn, item.to)
+						room_placed.emit(item.to, walker)
 					return true
 	
 	return false
@@ -604,12 +617,12 @@ func _simulate_occupied(placement: PlacedRoom) -> void:
 
 ## Recursively validates required connections for a room and its dependencies.
 ## Returns true if all required connections can be satisfied, false otherwise.
-## Populates additional_rooms with all rooms needed to satisfy requirements.
+## Populates additional_rooms with RequiredRoomLink entries for each required room.
 ## If max_depth is reached, returns false and prevents the entire room chain from being placed.
 func _validate_required_connections_recursive(
 	placement: PlacedRoom,
 	unsatisfied: Array[MetaRoom.ConnectionPoint],
-	additional_rooms: Array[PlacedRoom],
+	additional_rooms: Array[RequiredRoomLink],
 	depth: int,
 	max_depth: int
 ) -> bool:
@@ -624,7 +637,7 @@ func _validate_required_connections_recursive(
 		if found == null:
 			return false
 		
-		additional_rooms.append(found)
+		additional_rooms.append(RequiredRoomLink.new(placement, req_conn, found))
 		_simulate_occupied(found)
 		
 		# Check if the newly placed room also has required connections
@@ -644,7 +657,7 @@ func _validate_required_connections_recursive(
 					var existing_pl = occupied_cells[conn_world_pos]
 					var existing_c = _get_cell_at_world_pos(existing_pl, conn_world_pos)
 					if existing_c != null and existing_c.has_connection(MetaCell.opposite_direction(new_req_conn.direction)):
-						continue  # Matching connection present – POTENTIAL_PASSAGE will form when placed
+						continue  # Matching connection present – PASSAGE will form when placed (required connection)
 					# Occupied without matching connection – this chain is not viable
 					connections_viable = false
 					break

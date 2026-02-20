@@ -394,8 +394,8 @@ func _respawn_walker(walker: Walker) -> void:
 		# Path history is kept to show the walker's trail
 		# No walker_moved signal needed as position didn't change
 	else:
-		# Spawn at a random room with open connections (prefer compact placement)
-		var spawn_target = _get_random_room_with_open_connections_compact()
+		# Spawn at a random room with open connections (no center bias for teleports)
+		var spawn_target = _get_random_room_with_open_connections()
 		if spawn_target != null:
 			walker.current_room = spawn_target
 			walker.rooms_placed = 0

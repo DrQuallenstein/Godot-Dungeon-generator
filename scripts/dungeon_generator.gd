@@ -604,14 +604,28 @@ func _merge_overlapping_cells(existing_cell: MetaCell, new_cell: MetaCell, local
 
 ## Upgrades the overlapping connection cells to PASSAGE after the walker traverses them.
 ## Only upgrades cells that were set to POTENTIAL_PASSAGE by the merge step.
+## Also upgrades adjacent POTENTIAL_PASSAGE cells for multi-cell-wide connections.
 func _mark_passage_at_connection(from_placement: PlacedRoom, conn_point: MetaRoom.ConnectionPoint, new_placement: PlacedRoom) -> void:
 	var world_pos = from_placement.get_cell_world_pos(conn_point.x, conn_point.y)
-	var existing_cell = _get_cell_at_world_pos(from_placement, world_pos)
-	if existing_cell != null and existing_cell.cell_type == MetaCell.CellType.POTENTIAL_PASSAGE:
-		existing_cell.cell_type = MetaCell.CellType.PASSAGE
-	var new_cell = _get_cell_at_world_pos(new_placement, world_pos)
-	if new_cell != null and new_cell.cell_type == MetaCell.CellType.POTENTIAL_PASSAGE:
-		new_cell.cell_type = MetaCell.CellType.PASSAGE
+	_try_upgrade_cell_to_passage(from_placement, world_pos)
+	_try_upgrade_cell_to_passage(new_placement, world_pos)
+
+	# Also upgrade adjacent POTENTIAL_PASSAGE cells (multi-cell-wide connections)
+	for direction in [MetaCell.Direction.UP, MetaCell.Direction.RIGHT, MetaCell.Direction.BOTTOM, MetaCell.Direction.LEFT]:
+		var adj_pos = world_pos + _get_direction_offset(direction)
+		_try_upgrade_cell_to_passage(from_placement, adj_pos)
+		_try_upgrade_cell_to_passage(new_placement, adj_pos)
+		if occupied_cells.has(adj_pos):
+			var adj_placement: PlacedRoom = occupied_cells[adj_pos]
+			if adj_placement != from_placement and adj_placement != new_placement:
+				_try_upgrade_cell_to_passage(adj_placement, adj_pos)
+
+
+## Upgrades a single cell to PASSAGE if it is currently POTENTIAL_PASSAGE.
+func _try_upgrade_cell_to_passage(placement: PlacedRoom, world_pos: Vector2i) -> void:
+	var cell = _get_cell_at_world_pos(placement, world_pos)
+	if cell != null and cell.cell_type == MetaCell.CellType.POTENTIAL_PASSAGE:
+		cell.cell_type = MetaCell.CellType.PASSAGE
 
 
 ## Adds room cells to occupied_cells without adding to placed_rooms and without merging.

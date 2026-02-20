@@ -178,7 +178,8 @@ func _setup_properties_panel() -> void:
 	prop_cell_type_option = OptionButton.new()
 	prop_cell_type_option.add_item("BLOCKED", MetaCell.CellType.BLOCKED)
 	prop_cell_type_option.add_item("FLOOR", MetaCell.CellType.FLOOR)
-	prop_cell_type_option.add_item("DOOR", MetaCell.CellType.DOOR)
+	prop_cell_type_option.add_item("POTENTIAL_PASSAGE", MetaCell.CellType.POTENTIAL_PASSAGE)
+	# PASSAGE is intentionally excluded: it is set at runtime by the walker, not in room templates
 	prop_cell_type_option.item_selected.connect(_on_prop_cell_type_changed)
 	prop_cell_type_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	type_hbox.add_child(prop_cell_type_option)
@@ -377,7 +378,8 @@ func _update_cell_button(btn: Button, cell: MetaCell, x: int, y: int) -> void:
 	var type_symbols = {
 		MetaCell.CellType.BLOCKED: "■",
 		MetaCell.CellType.FLOOR: "·",
-		MetaCell.CellType.DOOR: "D"
+		MetaCell.CellType.POTENTIAL_PASSAGE: "P",
+		MetaCell.CellType.PASSAGE: "G"  ## Runtime-only, set by walker
 	}
 	
 	var text = type_symbols.get(cell.cell_type, "?")
@@ -402,7 +404,8 @@ func _update_cell_button(btn: Button, cell: MetaCell, x: int, y: int) -> void:
 	var colors = {
 		MetaCell.CellType.BLOCKED: Color(0.3, 0.3, 0.3),
 		MetaCell.CellType.FLOOR: Color(0.8, 0.8, 0.8),
-		MetaCell.CellType.DOOR: Color(0.6, 0.8, 1.0)
+		MetaCell.CellType.POTENTIAL_PASSAGE: Color(0.6, 0.8, 1.0),
+		MetaCell.CellType.PASSAGE: Color(0.2, 0.7, 0.3)  ## Runtime-only, set by walker
 	}
 	
 	var modulate_color = colors.get(cell.cell_type, Color.WHITE)

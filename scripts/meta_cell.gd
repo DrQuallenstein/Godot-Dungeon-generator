@@ -15,9 +15,10 @@ enum Direction {
 
 ## Cell type enum defining what kind of cell this is
 enum CellType {
-	BLOCKED = 0,  ## Cannot be walked through
-	FLOOR = 1,    ## Regular walkable floor
-	DOOR = 2      ## Connection point to other rooms
+	BLOCKED = 0,           ## Cannot be walked through
+	FLOOR = 1,             ## Regular walkable floor
+	POTENTIAL_PASSAGE = 2, ## Overlap point; post-processing decides if it becomes PASSAGE or BLOCKED
+	PASSAGE = 3            ## Definitive passage created by walker traversal
 }
 
 ## The type of this cell

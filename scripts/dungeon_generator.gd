@@ -284,6 +284,7 @@ func _walker_try_place_room(walker: Walker) -> bool:
 					if required_conns.is_empty():
 						# No required connections – place normally
 						_place_room(placement)
+						_mark_passage_at_connection(walker.current_room, conn_point, placement)
 						walker.move_to_room(placement)
 						room_placed.emit(placement, walker)
 						return true
@@ -302,7 +303,7 @@ func _walker_try_place_room(walker: Walker) -> bool:
 							var existing_pl = occupied_cells[conn_world_pos]
 							var existing_c = _get_cell_at_world_pos(existing_pl, conn_world_pos)
 							if existing_c != null and existing_c.has_connection(MetaCell.opposite_direction(req_conn.direction)):
-								continue  # Matching connection present – DOOR will form when placed
+								continue  # Matching connection present – POTENTIAL_PASSAGE will form when placed
 							# Occupied without matching connection – this rotation is not viable
 							connections_viable = false
 							break
@@ -313,6 +314,7 @@ func _walker_try_place_room(walker: Walker) -> bool:
 					if unsatisfied.is_empty():
 						# All required connections already satisfied
 						_place_room(placement)
+						_mark_passage_at_connection(walker.current_room, conn_point, placement)
 						walker.move_to_room(placement)
 						room_placed.emit(placement, walker)
 						return true
@@ -339,6 +341,7 @@ func _walker_try_place_room(walker: Walker) -> bool:
 					
 					# Commit: place main room and all additional rooms
 					_place_room(placement)
+					_mark_passage_at_connection(walker.current_room, conn_point, placement)
 					walker.move_to_room(placement)
 					room_placed.emit(placement, walker)
 					for additional in additional_rooms:
@@ -531,8 +534,8 @@ func _place_room(placement: PlacedRoom) -> void:
 
 
 ## Merges two overlapping blocked cells
-## If both have connections in opposite directions, removes those connections to create a solid wall
-## Returns the direction of the new cell that was connected, or -1 if no connection was made
+## If both have connections in opposite directions, removes those connections and marks the cell
+## as POTENTIAL_PASSAGE. Returns the direction of the connection, or -1 if no connection was made.
 func _merge_overlapping_cells(existing_cell: MetaCell, new_cell: MetaCell, local_x: int, local_y: int, new_placement: PlacedRoom) -> int:
 	var potential_door := false
 	var connected_direction: int = -1
@@ -562,15 +565,27 @@ func _merge_overlapping_cells(existing_cell: MetaCell, new_cell: MetaCell, local
 		potential_door = true
 		connected_direction = MetaCell.Direction.UP
 	
-	# Ensure both cells remain blocked or become doors
+	# Ensure both cells remain blocked or become potential passages
 	if potential_door:
-		existing_cell.cell_type = MetaCell.CellType.DOOR
-		new_cell.cell_type = MetaCell.CellType.DOOR
+		existing_cell.cell_type = MetaCell.CellType.POTENTIAL_PASSAGE
+		new_cell.cell_type = MetaCell.CellType.POTENTIAL_PASSAGE
 	else:
 		existing_cell.cell_type = MetaCell.CellType.BLOCKED
 		new_cell.cell_type = MetaCell.CellType.BLOCKED
 	
 	return connected_direction
+
+
+## Upgrades the overlapping connection cells to PASSAGE after the walker traverses them.
+## Only upgrades cells that were set to POTENTIAL_PASSAGE by the merge step.
+func _mark_passage_at_connection(from_placement: PlacedRoom, conn_point: MetaRoom.ConnectionPoint, new_placement: PlacedRoom) -> void:
+	var world_pos = from_placement.get_cell_world_pos(conn_point.x, conn_point.y)
+	var existing_cell = _get_cell_at_world_pos(from_placement, world_pos)
+	if existing_cell != null and existing_cell.cell_type == MetaCell.CellType.POTENTIAL_PASSAGE:
+		existing_cell.cell_type = MetaCell.CellType.PASSAGE
+	var new_cell = _get_cell_at_world_pos(new_placement, world_pos)
+	if new_cell != null and new_cell.cell_type == MetaCell.CellType.POTENTIAL_PASSAGE:
+		new_cell.cell_type = MetaCell.CellType.PASSAGE
 
 
 ## Adds room cells to occupied_cells without adding to placed_rooms and without merging.
@@ -629,7 +644,7 @@ func _validate_required_connections_recursive(
 					var existing_pl = occupied_cells[conn_world_pos]
 					var existing_c = _get_cell_at_world_pos(existing_pl, conn_world_pos)
 					if existing_c != null and existing_c.has_connection(MetaCell.opposite_direction(new_req_conn.direction)):
-						continue  # Matching connection present – DOOR will form when placed
+						continue  # Matching connection present – POTENTIAL_PASSAGE will form when placed
 					# Occupied without matching connection – this chain is not viable
 					connections_viable = false
 					break

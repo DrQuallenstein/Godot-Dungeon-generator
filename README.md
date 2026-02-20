@@ -105,7 +105,44 @@ Room A    +    Room B    =    Combined (5 cells, not 6)
 	   [■] = Shared blocked cell (overlap)
 ```
 
-### 5. Resource Cloning and Safe Modifications
+### 5. POTENTIAL_PASSAGE Resolution (Post-Processing)
+
+After meta-room generation completes, a dedicated post-processing step evaluates every remaining `POTENTIAL_PASSAGE` cell and decides whether it becomes a walkable `PASSAGE` or a solid `BLOCKED` cell.
+
+#### How It Works
+
+`POTENTIAL_PASSAGE` cells arise wherever two rooms share an overlapping BLOCKED cell that carries facing connections (e.g. `←` meets `→`). The walker algorithm already upgrades the connection cells it *actively traverses* to `PASSAGE`. All remaining `POTENTIAL_PASSAGE` cells are candidates for this step.
+
+Because the walker algorithm guarantees full dungeon connectivity, every remaining `POTENTIAL_PASSAGE` group is an **optional shortcut**. The resolver groups them into **4-connected components** and selects which to open using **Kruskal's Minimum Spanning Tree algorithm**:
+
+| Step | Action |
+|------|--------|
+| Build graph | Nodes = PlacedRooms, Edges = POTENTIAL_PASSAGE components connecting two distinct rooms, Weight = component cell count |
+| Kruskal's MST | Greedily add the smallest components that connect previously unconnected room pairs |
+| MST edges | Always opened as `PASSAGE` — form the minimal spanning shortcut structure |
+| Non-MST edges | Opened with `loop_passage_chance` probability (optional extra loops) |
+| No 2 distinct adjacent rooms | Always closed → `BLOCKED` (dead-end stubs) |
+
+Using the component cell count as edge weight means the MST prefers compact, single-cell passages over large multi-cell groups. This produces tight, purposeful shortcut corridors and limits the number of redundant loop passages to exactly what `loop_passage_chance` controls.
+
+#### Signal
+
+```gdscript
+signal passages_resolved(opened_count: int, blocked_count: int)
+```
+
+Emitted when resolution finishes. `opened_count` and `blocked_count` are the number of passage *groups* (not individual cells) that were opened or blocked.
+
+#### Configuration
+
+- `loop_passage_chance` — probability (0.0–1.0) that a non-MST loop passage is opened (default: `0.35`).
+
+```gdscript
+generator.loop_passage_chance = 0.5  # Open 50% of non-MST loop passages
+```
+
+
+### 6. Resource Cloning and Safe Modifications
 
 To enable safe modifications during dungeon generation (like setting cell types to DOOR at connection points), the generator **clones all rooms before placement**:
 
@@ -129,7 +166,7 @@ This allows you to safely implement features like:
 - Modifying cell properties during placement
 - Implementing custom room merging logic
 
-### 6. Multi-Walker Dungeon Generation Algorithm
+### 7. Multi-Walker Dungeon Generation Algorithm
 
 The generator uses a **multi-walker room placement algorithm** that creates more organic, interconnected dungeons:
 
@@ -197,6 +234,7 @@ The generator uses a **multi-walker room placement algorithm** that creates more
 - `max_placement_attempts_per_room`: Tries per room placement (default: 10)
 - `target_meta_cell_count`: Stop when this many cells are placed (default: 500)
 - `compactness_bias`: How compact dungeons are (0.0 = random, 1.0 = very compact, default: 0.3)
+- **`loop_passage_chance`**: Probability to open optional loop passages in post-processing (0.0–1.0, default: 0.35)
 
 This algorithm creates dungeons with:
 - More organic layouts (multiple growth points)

@@ -106,10 +106,23 @@ class RequiredRoomLink:
 ## Directional bias for more compact dungeons (0 = no bias, 1 = strong bias towards center)
 @export_range(0.0, 1.0) var compactness_bias: float = 0.3
 
+## Probability that a non-MST POTENTIAL_PASSAGE group is opened as an optional loop passage.
+## MST-selected passage groups are always opened to form the minimal shortcut structure.
+## Range: 0.0 = no extra loops, 1.0 = all extra loops opened (default: 0.35)
+@export_range(0.0, 1.0) var loop_passage_chance: float = 0.35
+
 ## Maximum recursion depth when validating required connections
 ## Limits how many chained required connections can be validated
 ## Higher values allow more complex room chains but may impact performance
 const MAX_REQUIRED_CONNECTION_DEPTH: int = 3
+
+## All four cardinal directions in a fixed order — used throughout generation and post-processing
+const DIRECTIONS: Array[MetaCell.Direction] = [
+	MetaCell.Direction.UP,
+	MetaCell.Direction.RIGHT,
+	MetaCell.Direction.BOTTOM,
+	MetaCell.Direction.LEFT
+]
 
 ## List of all placed rooms in the dungeon
 var placed_rooms: Array[PlacedRoom] = []
@@ -128,6 +141,10 @@ var next_walker_id: int = 0
 ## Parameters: success (bool), room_count (int), cell_count (int)
 ## Note: cell_count parameter added in multi-walker version
 signal generation_complete(success: bool, room_count: int, cell_count: int)
+
+## Signal emitted after resolve_potential_passages() finishes
+## Parameters: opened_count (int), blocked_count (int) — number of passage groups opened/blocked
+signal passages_resolved(opened_count: int, blocked_count: int)
 
 ## Signal emitted when a room is placed (for visualization)
 ## Parameters: placement (PlacedRoom), walker (Walker)
@@ -228,6 +245,10 @@ func generate() -> bool:
 	
 	var cell_count = _count_total_cells()
 	var success = cell_count >= target_meta_cell_count
+	
+	# Post-processing: resolve remaining POTENTIAL_PASSAGE cells into PASSAGE or BLOCKED
+	resolve_potential_passages()
+	
 	generation_complete.emit(success, placed_rooms.size(), cell_count)
 	
 	print("DungeonGenerator: Generated ", placed_rooms.size(), " rooms with ", cell_count, " cells")
@@ -877,3 +898,196 @@ func _get_random_room_with_open_connections_compact() -> PlacedRoom:
 	
 	# Random selection
 	return rooms_with_open[randi() % rooms_with_open.size()]
+
+
+# ---------------------------------------------------------------------------
+# Post-processing: POTENTIAL_PASSAGE resolution via Minimum Spanning Tree
+# ---------------------------------------------------------------------------
+
+## Resolves all remaining POTENTIAL_PASSAGE cells after meta-room generation.
+##
+## Because the walker algorithm guarantees full connectivity, every remaining
+## POTENTIAL_PASSAGE group is an optional shortcut. The selection uses Kruskal's
+## Minimum Spanning Tree algorithm on a graph where:
+##   - Nodes  = PlacedRooms (identified by world position)
+##   - Edges  = POTENTIAL_PASSAGE components connecting two distinct rooms
+##   - Weight = cell count of the component (smaller passages are preferred)
+##
+## MST edges  → always opened as PASSAGE (minimal spanning shortcut structure).
+## Non-MST edges → opened with loop_passage_chance probability (optional loops).
+## Components with fewer than 2 distinct adjacent rooms → always blocked.
+##
+## Emits passages_resolved(opened_count, blocked_count) when done.
+func resolve_potential_passages() -> void:
+	var potential_cells: Dictionary = _collect_potential_passage_cells()
+
+	if potential_cells.is_empty():
+		passages_resolved.emit(0, 0)
+		return
+
+	var components: Array = _find_passage_components(potential_cells)
+
+	# --- Build edge list for Kruskal's MST ---
+	# edge dict: { index: int, a: Vector2i, b: Vector2i, weight: int }
+	var edges: Array = []
+	var component_room_ids: Array = []  # parallel to components
+
+	for i: int in range(components.size()):
+		var component: Array[Vector2i] = components[i]
+		var component_set: Dictionary = {}
+		for pos: Vector2i in component:
+			component_set[pos] = true
+
+		var room_ids: Array = _find_adjacent_room_ids(component, component_set)
+		component_room_ids.append(room_ids)
+
+		# Create one edge for every distinct pair of adjacent rooms.
+		# A component touching 3+ rooms (rare) produces multiple edges, all sharing
+		# the same component index so any MST pick opens the whole component.
+		for j: int in range(room_ids.size()):
+			for k: int in range(j + 1, room_ids.size()):
+				edges.append({"index": i, "a": room_ids[j], "b": room_ids[k], "weight": component.size()})
+
+	# --- Kruskal's MST: sort edges by weight, union rooms greedily ---
+	edges.sort_custom(func(x: Dictionary, y: Dictionary) -> bool: return x.weight < y.weight)
+
+	# Initialize Union-Find with every room referenced by an edge
+	var uf: Dictionary = {}
+	for edge: Dictionary in edges:
+		if not uf.has(edge.a):
+			uf[edge.a] = edge.a
+		if not uf.has(edge.b):
+			uf[edge.b] = edge.b
+
+	var mst_indices: Dictionary = {}  # component index -> true (is MST edge)
+	for edge: Dictionary in edges:
+		if _uf_union(uf, edge.a, edge.b):
+			mst_indices[edge.index] = true
+
+	# --- Apply decisions to every component ---
+	var opened_count: int = 0
+	var blocked_count: int = 0
+
+	for i: int in range(components.size()):
+		var should_open: bool
+		if component_room_ids[i].size() < 2:
+			should_open = false  # Dead-end stub: no two distinct rooms to connect
+		elif mst_indices.has(i):
+			should_open = true   # MST edge: forms the minimal shortcut structure
+		else:
+			should_open = randf() < loop_passage_chance  # Optional extra loop
+
+		_apply_passage_decision(components[i], potential_cells, should_open)
+
+		if should_open:
+			opened_count += 1
+		else:
+			blocked_count += 1
+
+	passages_resolved.emit(opened_count, blocked_count)
+	print("DungeonGenerator: Passage resolution (MST) — opened: %d, blocked: %d groups" % [opened_count, blocked_count])
+
+
+## Collects all POTENTIAL_PASSAGE cells from every placed room.
+## Returns: Vector2i (world pos) -> Array[{placement, x, y}]
+## A world position can have entries from two placements (blocked-cell overlap).
+func _collect_potential_passage_cells() -> Dictionary:
+	var result: Dictionary = {}
+
+	for placement: PlacedRoom in placed_rooms:
+		for y in range(placement.room.height):
+			for x in range(placement.room.width):
+				var cell: MetaCell = placement.room.get_cell(x, y)
+				if cell == null or cell.cell_type != MetaCell.CellType.POTENTIAL_PASSAGE:
+					continue
+				var world_pos: Vector2i = placement.get_cell_world_pos(x, y)
+				if not result.has(world_pos):
+					result[world_pos] = []
+				result[world_pos].append({"placement": placement, "x": x, "y": y})
+
+	return result
+
+
+## Groups POTENTIAL_PASSAGE cells into 4-connected components via BFS flood-fill.
+## Returns an Array of components; each component is an Array[Vector2i].
+func _find_passage_components(potential_cells: Dictionary) -> Array:
+	var visited: Dictionary = {}
+	var components: Array = []
+
+	for start_pos: Vector2i in potential_cells.keys():
+		if visited.has(start_pos):
+			continue
+
+		var component: Array[Vector2i] = []
+		var queue: Array[Vector2i] = [start_pos]
+
+		while not queue.is_empty():
+			var pos: Vector2i = queue.pop_front()
+			if visited.has(pos) or not potential_cells.has(pos):
+				continue
+			visited[pos] = true
+			component.append(pos)
+			for direction: MetaCell.Direction in DIRECTIONS:
+				queue.append(pos + _get_direction_offset(direction))
+
+		if not component.is_empty():
+			components.append(component)
+
+	return components
+
+
+## Returns the unique room positions (Vector2i, used as node IDs) for every PlacedRoom
+## whose FLOOR or PASSAGE cells are directly adjacent to the given component.
+## component_set is a pre-built Dictionary of the component's world positions for O(1) lookup.
+func _find_adjacent_room_ids(component: Array[Vector2i], component_set: Dictionary) -> Array:
+	var found: Dictionary = {}
+	for pos: Vector2i in component:
+		for direction: MetaCell.Direction in DIRECTIONS:
+			var neighbor: Vector2i = pos + _get_direction_offset(direction)
+			if component_set.has(neighbor) or not occupied_cells.has(neighbor):
+				continue
+			var pl: PlacedRoom = occupied_cells[neighbor]
+			var cell: MetaCell = _get_cell_at_world_pos(pl, neighbor)
+			if cell != null and (cell.cell_type == MetaCell.CellType.FLOOR or cell.cell_type == MetaCell.CellType.PASSAGE):
+				found[pl.position] = true
+	return found.keys()
+
+
+## Union-Find: iterative find with path compression.
+## Returns the root representative of x in the disjoint-set forest.
+func _uf_find(uf: Dictionary, x: Vector2i) -> Vector2i:
+	var root: Vector2i = x
+	while uf[root] != root:
+		root = uf[root]
+	# Path compression: point every node on the path directly to the root
+	var cur: Vector2i = x
+	while cur != root:
+		var nxt: Vector2i = uf[cur]
+		uf[cur] = root
+		cur = nxt
+	return root
+
+
+## Union-Find: unite the sets containing a and b.
+## Returns true if they were in different sets (edge is useful for MST), false otherwise.
+func _uf_union(uf: Dictionary, a: Vector2i, b: Vector2i) -> bool:
+	var ra: Vector2i = _uf_find(uf, a)
+	var rb: Vector2i = _uf_find(uf, b)
+	if ra == rb:
+		return false
+	uf[ra] = rb
+	return true
+
+
+## Applies the PASSAGE or BLOCKED decision to every cell in a component.
+## Updates all placements that own a cell at each world position in the component.
+func _apply_passage_decision(component: Array[Vector2i], potential_cells: Dictionary, open: bool) -> void:
+	var new_type: MetaCell.CellType = MetaCell.CellType.PASSAGE if open else MetaCell.CellType.BLOCKED
+
+	for world_pos: Vector2i in component:
+		if not potential_cells.has(world_pos):
+			continue
+		for entry: Dictionary in potential_cells[world_pos]:
+			var cell: MetaCell = (entry["placement"] as PlacedRoom).room.get_cell(entry["x"], entry["y"])
+			if cell != null and cell.cell_type == MetaCell.CellType.POTENTIAL_PASSAGE:
+				cell.cell_type = new_type

@@ -12,13 +12,13 @@ The MetaRoom Editor is a visual editor plugin for Godot 4.6 that makes creating 
 - Color-coded cells based on type:
   - **Gray**: BLOCKED cells
   - **White**: FLOOR cells
-  - **Blue**: DOOR cells
+  - **Blue**: POTENTIAL_PASSAGE cells
 
 ### Cell Type Brush
 Three types of cells available:
 - **BLOCKED**: Impassable cells (walls)
 - **FLOOR**: Regular walkable floor
-- **DOOR**: Connection points for room exits
+- **POTENTIAL_PASSAGE**: Connection points for room exits (become PASSAGE or BLOCKED at runtime)
 
 ### Connection Editor
 - Toggle connections in 4 directions: UP, RIGHT, BOTTOM, LEFT
@@ -64,7 +64,7 @@ Three types of cells available:
 ### Workflow Example
 
 1. **Set room dimensions**: Adjust width/height, click "Resize Room"
-2. **Choose cell type**: Click BLOCKED, FLOOR, or DOOR button
+2. **Choose cell type**: Click BLOCKED, FLOOR, or POTENTIAL_PASSAGE button
 3. **Paint cells**: Click grid cells to apply the selected type
 4. **Add connections**: 
    - Click a connection button (UP/RIGHT/BOTTOM/LEFT)

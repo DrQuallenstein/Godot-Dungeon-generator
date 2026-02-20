@@ -518,8 +518,10 @@ func _draw_room(placement: DungeonGenerator.PlacedRoom, offset: Vector2) -> void
 			match cell.cell_type:
 				MetaCell.CellType.FLOOR:
 					color = Color(0.3, 0.3, 0.4)
-				MetaCell.CellType.DOOR:
+				MetaCell.CellType.POTENTIAL_PASSAGE:
 					color = Color(0.6, 0.4, 0.2)
+				MetaCell.CellType.PASSAGE:
+					color = Color(0.2, 0.7, 0.3)
 				MetaCell.CellType.BLOCKED:
 					color = Color(0.1, 0.1, 0.1)
 			

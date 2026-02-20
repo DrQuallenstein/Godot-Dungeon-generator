@@ -62,6 +62,20 @@ class Walker:
 		return Color.from_hsv(hue, 0.8, 0.9)
 
 
+## Links a parent room to a child room that was placed to satisfy a required connection
+class RequiredRoomLink:
+	var from: PlacedRoom              ## The room that had the required connection
+	var conn: MetaRoom.ConnectionPoint ## The required connection point used
+	var to: PlacedRoom                ## The room placed to satisfy the connection
+	var needs_placement: bool         ## False when 'to' is already placed (pre-satisfied connection)
+
+	func _init(p_from: PlacedRoom, p_conn: MetaRoom.ConnectionPoint, p_to: PlacedRoom, p_needs_placement: bool = true) -> void:
+		from = p_from
+		conn = p_conn
+		to = p_to
+		needs_placement = p_needs_placement
+
+
 ## Available room templates to use for generation
 @export var room_templates: Array[MetaRoom] = []
 
@@ -284,6 +298,7 @@ func _walker_try_place_room(walker: Walker) -> bool:
 					if required_conns.is_empty():
 						# No required connections – place normally
 						_place_room(placement)
+						_mark_passage_at_connection(walker.current_room, conn_point, placement)
 						walker.move_to_room(placement)
 						room_placed.emit(placement, walker)
 						return true
@@ -291,7 +306,9 @@ func _walker_try_place_room(walker: Walker) -> bool:
 					# Determine which required connection is the incoming one (already satisfied)
 					var incoming_dir = MetaCell.opposite_direction(conn_point.direction)
 					
-					# Collect required connections that still need a room (excluding incoming)
+					# Collect required connections: unsatisfied (need a new room) and
+					# pre-satisfied (already overlap an existing room, only need PASSAGE marking)
+					var pre_satisfied_links: Array[RequiredRoomLink] = []
 					var unsatisfied: Array[MetaRoom.ConnectionPoint] = []
 					var connections_viable := true
 					for req_conn in required_conns:
@@ -302,7 +319,8 @@ func _walker_try_place_room(walker: Walker) -> bool:
 							var existing_pl = occupied_cells[conn_world_pos]
 							var existing_c = _get_cell_at_world_pos(existing_pl, conn_world_pos)
 							if existing_c != null and existing_c.has_connection(MetaCell.opposite_direction(req_conn.direction)):
-								continue  # Matching connection present – DOOR will form when placed
+								pre_satisfied_links.append(RequiredRoomLink.new(placement, req_conn, existing_pl, false))
+								continue  # Already satisfied – track for PASSAGE marking, no new room needed
 							# Occupied without matching connection – this rotation is not viable
 							connections_viable = false
 							break
@@ -311,8 +329,11 @@ func _walker_try_place_room(walker: Walker) -> bool:
 						continue  # Try next rotation
 					
 					if unsatisfied.is_empty():
-						# All required connections already satisfied
+						# All required connections already satisfied by existing rooms
 						_place_room(placement)
+						_mark_passage_at_connection(walker.current_room, conn_point, placement)
+						for link: RequiredRoomLink in pre_satisfied_links:
+							_mark_passage_at_connection(link.from, link.conn, link.to)
 						walker.move_to_room(placement)
 						room_placed.emit(placement, walker)
 						return true
@@ -323,7 +344,7 @@ func _walker_try_place_room(walker: Walker) -> bool:
 					var saved_occupied = occupied_cells.duplicate()
 					_simulate_occupied(placement)
 					
-					var additional_rooms: Array[PlacedRoom] = []
+					var additional_rooms: Array[RequiredRoomLink] = []
 					var all_satisfied := true
 					
 					# Recursively validate required connections (with depth limit to prevent infinite loops)
@@ -337,13 +358,21 @@ func _walker_try_place_room(walker: Walker) -> bool:
 					if not all_satisfied:
 						continue  # Try next rotation / template
 					
+					# Merge pre-satisfied links so the commit loop marks their passages too
+					for link: RequiredRoomLink in pre_satisfied_links:
+						additional_rooms.append(link)
+					
 					# Commit: place main room and all additional rooms
 					_place_room(placement)
+					_mark_passage_at_connection(walker.current_room, conn_point, placement)
 					walker.move_to_room(placement)
 					room_placed.emit(placement, walker)
-					for additional in additional_rooms:
-						_place_room(additional)
-						room_placed.emit(additional, walker)
+					for item: RequiredRoomLink in additional_rooms:
+						if item.needs_placement:
+							_place_room(item.to)
+						_mark_passage_at_connection(item.from, item.conn, item.to)
+						if item.needs_placement:
+							room_placed.emit(item.to, walker)
 					return true
 	
 	return false
@@ -365,8 +394,8 @@ func _respawn_walker(walker: Walker) -> void:
 		# Path history is kept to show the walker's trail
 		# No walker_moved signal needed as position didn't change
 	else:
-		# Spawn at a random room with open connections (prefer compact placement)
-		var spawn_target = _get_random_room_with_open_connections_compact()
+		# Spawn at a random room with open connections (no center bias for teleports)
+		var spawn_target = _get_random_room_with_open_connections()
 		if spawn_target != null:
 			walker.current_room = spawn_target
 			walker.rooms_placed = 0
@@ -531,8 +560,8 @@ func _place_room(placement: PlacedRoom) -> void:
 
 
 ## Merges two overlapping blocked cells
-## If both have connections in opposite directions, removes those connections to create a solid wall
-## Returns the direction of the new cell that was connected, or -1 if no connection was made
+## If both have connections in opposite directions, removes those connections and marks the cell
+## as POTENTIAL_PASSAGE. Returns the direction of the connection, or -1 if no connection was made.
 func _merge_overlapping_cells(existing_cell: MetaCell, new_cell: MetaCell, local_x: int, local_y: int, new_placement: PlacedRoom) -> int:
 	var potential_door := false
 	var connected_direction: int = -1
@@ -562,15 +591,27 @@ func _merge_overlapping_cells(existing_cell: MetaCell, new_cell: MetaCell, local
 		potential_door = true
 		connected_direction = MetaCell.Direction.UP
 	
-	# Ensure both cells remain blocked or become doors
+	# Ensure both cells remain blocked or become potential passages
 	if potential_door:
-		existing_cell.cell_type = MetaCell.CellType.DOOR
-		new_cell.cell_type = MetaCell.CellType.DOOR
+		existing_cell.cell_type = MetaCell.CellType.POTENTIAL_PASSAGE
+		new_cell.cell_type = MetaCell.CellType.POTENTIAL_PASSAGE
 	else:
 		existing_cell.cell_type = MetaCell.CellType.BLOCKED
 		new_cell.cell_type = MetaCell.CellType.BLOCKED
 	
 	return connected_direction
+
+
+## Upgrades the overlapping connection cells to PASSAGE after the walker traverses them.
+## Only upgrades cells that were set to POTENTIAL_PASSAGE by the merge step.
+func _mark_passage_at_connection(from_placement: PlacedRoom, conn_point: MetaRoom.ConnectionPoint, new_placement: PlacedRoom) -> void:
+	var world_pos = from_placement.get_cell_world_pos(conn_point.x, conn_point.y)
+	var existing_cell = _get_cell_at_world_pos(from_placement, world_pos)
+	if existing_cell != null and existing_cell.cell_type == MetaCell.CellType.POTENTIAL_PASSAGE:
+		existing_cell.cell_type = MetaCell.CellType.PASSAGE
+	var new_cell = _get_cell_at_world_pos(new_placement, world_pos)
+	if new_cell != null and new_cell.cell_type == MetaCell.CellType.POTENTIAL_PASSAGE:
+		new_cell.cell_type = MetaCell.CellType.PASSAGE
 
 
 ## Adds room cells to occupied_cells without adding to placed_rooms and without merging.
@@ -589,12 +630,12 @@ func _simulate_occupied(placement: PlacedRoom) -> void:
 
 ## Recursively validates required connections for a room and its dependencies.
 ## Returns true if all required connections can be satisfied, false otherwise.
-## Populates additional_rooms with all rooms needed to satisfy requirements.
+## Populates additional_rooms with RequiredRoomLink entries for each required room.
 ## If max_depth is reached, returns false and prevents the entire room chain from being placed.
 func _validate_required_connections_recursive(
 	placement: PlacedRoom,
 	unsatisfied: Array[MetaRoom.ConnectionPoint],
-	additional_rooms: Array[PlacedRoom],
+	additional_rooms: Array[RequiredRoomLink],
 	depth: int,
 	max_depth: int
 ) -> bool:
@@ -609,7 +650,7 @@ func _validate_required_connections_recursive(
 		if found == null:
 			return false
 		
-		additional_rooms.append(found)
+		additional_rooms.append(RequiredRoomLink.new(placement, req_conn, found))
 		_simulate_occupied(found)
 		
 		# Check if the newly placed room also has required connections
@@ -629,7 +670,8 @@ func _validate_required_connections_recursive(
 					var existing_pl = occupied_cells[conn_world_pos]
 					var existing_c = _get_cell_at_world_pos(existing_pl, conn_world_pos)
 					if existing_c != null and existing_c.has_connection(MetaCell.opposite_direction(new_req_conn.direction)):
-						continue  # Matching connection present – DOOR will form when placed
+						additional_rooms.append(RequiredRoomLink.new(found, new_req_conn, existing_pl, false))
+						continue  # Already satisfied – track for PASSAGE marking, no new room needed
 					# Occupied without matching connection – this chain is not viable
 					connections_viable = false
 					break
@@ -790,16 +832,15 @@ func _get_random_room_with_open_connections_compact() -> PlacedRoom:
 	# Apply compactness bias
 	if compactness_bias > 0 and randf() < compactness_bias:
 		var center = _get_dungeon_center()
-		var closest_room: PlacedRoom = null
-		var closest_dist = INF
-		
+		# Sort rooms by distance to center, then pick randomly from the closest quarter.
+		# This maintains compactness bias while preventing all walkers from teleporting
+		# to the exact same room every time.
+		var scored: Array = []
 		for room in rooms_with_open:
-			var dist = Vector2(room.position).distance_to(center)
-			if dist < closest_dist:
-				closest_dist = dist
-				closest_room = room
-		
-		return closest_room
+			scored.append({room = room, dist = Vector2(room.position).distance_to(center)})
+		scored.sort_custom(func(a, b): return a.dist < b.dist)
+		var pick_count := mini(scored.size(), maxi(2, scored.size() / 4))
+		return scored[randi() % pick_count].room
 	
 	# Random selection
 	return rooms_with_open[randi() % rooms_with_open.size()]

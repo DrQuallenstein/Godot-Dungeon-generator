@@ -367,12 +367,23 @@ func _walker_try_place_room(walker: Walker) -> bool:
 					_mark_passage_at_connection(walker.current_room, conn_point, placement)
 					walker.move_to_room(placement)
 					room_placed.emit(placement, walker)
+					var newly_placed_rooms: Array[PlacedRoom] = []
 					for item: RequiredRoomLink in additional_rooms:
 						if item.needs_placement:
 							_place_room(item.to)
 						_mark_passage_at_connection(item.from, item.conn, item.to)
 						if item.needs_placement:
 							room_placed.emit(item.to, walker)
+							newly_placed_rooms.append(item.to)
+					# If the connection room has no open connections left (all were required),
+					# jump the walker to a random newly placed room that has open connections.
+					if _get_open_connections(placement).is_empty() and not newly_placed_rooms.is_empty():
+						var candidates: Array[PlacedRoom] = []
+						for r in newly_placed_rooms:
+							if not _get_open_connections(r).is_empty():
+								candidates.append(r)
+						if not candidates.is_empty():
+							walker.move_to_room(candidates[randi() % candidates.size()])
 					return true
 	
 	return false

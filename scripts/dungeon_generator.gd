@@ -453,19 +453,39 @@ func _get_open_connections(placement: PlacedRoom) -> Array[MetaRoom.ConnectionPo
 	return open_connections
 
 
+## Counts how many connection points of a placed room already lead to an occupied cell.
+## A room where this count equals 1 has exactly one existing neighbor in the current dungeon
+## graph, making it a dead-end leaf node (single entrance) regardless of total connection points.
+func _count_occupied_connections(placement: PlacedRoom) -> int:
+	var count := 0
+	for conn_point in placement.room.get_connection_points():
+		var conn_world_pos = placement.get_cell_world_pos(conn_point.x, conn_point.y)
+		var adjacent_pos = conn_world_pos + _get_direction_offset(conn_point.direction)
+		if occupied_cells.has(adjacent_pos):
+			count += 1
+	return count
+
+
 ## Gets a random placed room that has at least one open connection
-## Prefers rooms with unsatisfied required connections
+## Prioritizes dead-end rooms (exactly one occupied connection = one entrance)
 func _get_random_room_with_open_connections() -> PlacedRoom:
 	var rooms_with_open: Array[PlacedRoom] = []
 	
 	for placement in placed_rooms:
-		var open_connections = _get_open_connections(placement)
-		if not open_connections.is_empty():
+		if not _get_open_connections(placement).is_empty():
 			rooms_with_open.append(placement)
 	
-	# Otherwise, pick any room with open connections
 	if rooms_with_open.is_empty():
 		return null
+	
+	# Prefer dead-end rooms with exactly one entrance for walker teleports
+	var dead_end_rooms: Array[PlacedRoom] = []
+	for room in rooms_with_open:
+		if _count_occupied_connections(room) == 1:
+			dead_end_rooms.append(room)
+	
+	if not dead_end_rooms.is_empty():
+		return dead_end_rooms[randi() % dead_end_rooms.size()]
 	
 	return rooms_with_open[randi() % rooms_with_open.size()]
 

@@ -1079,7 +1079,13 @@ func _assign_room_types() -> void:
 		)
 
 	# Place CHEST and MERCHANT from periphery, ensuring no two are graph-adjacent
-	var assigned_positions: Dictionary = {}  # position -> true (for adjacency checks)
+	# and none are adjacent to ENTRANCE or BOSS rooms
+	var protected_positions: Dictionary = {}  # ENTRANCE + BOSS positions (never relaxable)
+	if not placed_rooms.is_empty():
+		protected_positions[placed_rooms[0].position] = true
+	if boss_room != null:
+		protected_positions[boss_room.position] = true
+	var assigned_positions: Dictionary = {}  # CHEST/MERCHANT positions (relaxable in fallback)
 	var periphery_used: Dictionary = {}  # index in periphery_eligible -> true
 
 	# Interleave CHEST and MERCHANT to spread them better
@@ -1100,7 +1106,10 @@ func _assign_room_types() -> void:
 			if periphery_used.has(idx):
 				continue
 			var candidate: PlacedRoom = periphery_eligible[idx]
-			# Check that no already-assigned CHEST/MERCHANT is a graph neighbor
+			# Check adjacency to ENTRANCE/BOSS (never allowed)
+			if _is_adjacent_to_assigned(candidate.position, protected_positions, room_graph):
+				continue
+			# Check adjacency to other CHEST/MERCHANT
 			if _is_adjacent_to_assigned(candidate.position, assigned_positions, room_graph):
 				continue
 			candidate.room_type = rtype
@@ -1109,12 +1118,15 @@ func _assign_room_types() -> void:
 			placed = true
 			break
 		if not placed:
-			# Relax adjacency constraint if we couldn't find a non-adjacent room
+			# Relax CHEST/MERCHANT mutual adjacency, but still enforce ENTRANCE/BOSS separation
 			for idx in range(periphery_eligible.size()):
 				if periphery_used.has(idx):
 					continue
-				periphery_eligible[idx].room_type = rtype
-				assigned_positions[periphery_eligible[idx].position] = true
+				var candidate: PlacedRoom = periphery_eligible[idx]
+				if _is_adjacent_to_assigned(candidate.position, protected_positions, room_graph):
+					continue
+				candidate.room_type = rtype
+				assigned_positions[candidate.position] = true
 				periphery_used[idx] = true
 				placed = true
 				break

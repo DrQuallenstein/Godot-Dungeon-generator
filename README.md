@@ -366,7 +366,7 @@ The `DungeonTileRenderer` automatically converts generated meta-cells into TileM
 1. **Automatic Rendering**: Connects to `DungeonGenerator.generation_complete` signal
 2. **Meta-Cell Expansion**: Each meta-cell becomes a 5×5 grid of tiles (configurable via `CELLS_PER_META` constant)
 3. **Floor Tiles**: Non-BLOCKED cells use grass tiles from TileSet source 0 (8×8 atlas) with deterministic variation
-4. **Wall Tiles**: BLOCKED cells could use wall tiles from source 1, but currently only floor cells are rendered
+4. **Wall Tiles**: BLOCKED cells use the solid stone tile from TileSet source 1 (atlas coord 2:3)
 5. **No Manual Setup**: Just attach the script to your TileMapLayer node
 
 #### Configuration
@@ -378,7 +378,7 @@ const CELLS_PER_META: int = 5        # Each meta-cell = 5×5 tiles
 const FLOOR_SOURCE_ID: int = 0       # Grass tileset (8×8 atlas, 32×32 tiles)
 const WALL_SOURCE_ID: int = 1        # Wall tileset (16×16 atlas, 32×32 tiles, with physics)
 const WALL_ATLAS_COORD: Vector2i = Vector2i(2, 3)  # Solid stone wall tile
-const FLOOR_ATLAS_SIZE: int = 8      # 8×8 grass palette
+const FLOOR_ATLAS_COLS: int = 8      # 8×8 grass palette (columns and rows)
 ```
 
 #### Setup in Your Scene

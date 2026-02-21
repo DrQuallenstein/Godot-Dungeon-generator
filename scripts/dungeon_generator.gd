@@ -1083,7 +1083,7 @@ func _assign_room_types() -> void:
 				break
 			# Target position: spread evenly across the list
 			var target_idx: int = 0
-			if count <= 1:
+			if count == 1:
 				target_idx = eligible.size() / 2
 			else:
 				target_idx = int(float(j) / float(count) * float(eligible.size()))
@@ -1092,9 +1092,9 @@ func _assign_room_types() -> void:
 			var best_dist: int = eligible.size() + 1
 			for k in range(eligible.size()):
 				if not assigned_indices.has(k):
-					var d: int = absi(k - target_idx)
-					if d < best_dist:
-						best_dist = d
+					var dist_to_target: int = absi(k - target_idx)
+					if dist_to_target < best_dist:
+						best_dist = dist_to_target
 						best_idx = k
 			if best_idx >= 0:
 				eligible[best_idx].room_type = rtype

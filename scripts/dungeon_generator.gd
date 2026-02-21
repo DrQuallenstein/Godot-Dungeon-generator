@@ -75,6 +75,8 @@ class RequiredRoomLink:
 		to = p_to
 		needs_placement = p_needs_placement
 
+## Available room templates to use for generation
+@export var boos_room_template: MetaRoom = null
 
 ## Available room templates to use for generation
 @export var room_templates: Array[MetaRoom] = []

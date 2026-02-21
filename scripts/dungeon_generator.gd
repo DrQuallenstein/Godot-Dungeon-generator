@@ -22,6 +22,8 @@ class PlacedRoom:
 	var rotation: RoomRotator.Rotation
 	var original_template: MetaRoom  # Reference to the original template before cloning/rotation
 	var room_type: int = 0  # RoomType enum value (NONE by default)
+	var zone: int = 0  # Zone ID (0 = default zone, 1+ = configured zones)
+	var is_transition: bool = false  # True if this room borders a room in a different zone
 	
 	func _init(p_room: MetaRoom, p_position: Vector2i, p_rotation: RoomRotator.Rotation, p_original_template: MetaRoom):
 		room = p_room
@@ -29,6 +31,8 @@ class PlacedRoom:
 		rotation = p_rotation
 		original_template = p_original_template
 		room_type = 0  # RoomType.NONE
+		zone = 0
+		is_transition = false
 	
 	## Gets the world position of a cell in this room
 	func get_cell_world_pos(local_x: int, local_y: int) -> Vector2i:
@@ -145,6 +149,13 @@ class RequiredRoomLink:
 ## These room types will only be placed at least this many rooms away from the entrance.
 @export_range(0, 20) var min_chest_merchant_distance: int = 4
 
+## Zone configurations for dividing the dungeon into thematic areas.
+## Each ZoneConfig defines a named zone (e.g., "CASTLE") with a target room count.
+## Zone 0 is the default zone (e.g., landscape); configured zones get IDs 1, 2, ...
+## Zones form contiguous clusters of rooms. Rooms bordering a different zone are
+## marked as transition rooms (is_transition = true).
+@export var zone_configs: Array[ZoneConfig] = []
+
 ## Maximum recursion depth when validating required connections
 ## Limits how many chained required connections can be validated
 ## Higher values allow more complex room chains but may impact performance
@@ -201,6 +212,9 @@ signal boss_room_placed(placement: PlacedRoom)
 
 ## Signal emitted after room types have been assigned
 signal room_types_assigned()
+
+## Signal emitted after zones have been assigned to rooms
+signal zones_assigned()
 
 
 ## Generates the dungeon using multi-walker algorithm
@@ -299,6 +313,9 @@ func generate() -> bool:
 	
 	# Assign room types (ENTRANCE, BOSS, EVENT, CHEST, MERCHANT)
 	_assign_room_types()
+	
+	# Assign zones (thematic areas like landscape, castle interior, etc.)
+	_assign_zones()
 	
 	generation_complete.emit(success, placed_rooms.size(), cell_count)
 	
@@ -1250,6 +1267,148 @@ static func get_room_type_color(rtype: int) -> Color:
 			return Color(1.0, 0.85, 0.0)   # Golden Yellow
 		RoomType.MERCHANT:
 			return Color(0.4, 0.9, 0.4)    # Green
+	return Color.WHITE
+
+
+# ---------------------------------------------------------------------------
+# Zone Assignment
+# ---------------------------------------------------------------------------
+
+## Assigns zones to placed rooms based on zone_configs.
+## Zone 0 is the default zone (all rooms start here). Each ZoneConfig entry
+## creates a contiguous cluster of rooms via BFS growth from a seed room.
+## After assignment, rooms bordering a different zone are marked as transition rooms.
+func _assign_zones() -> void:
+	# Reset all zones
+	for pl in placed_rooms:
+		pl.zone = 0
+		pl.is_transition = false
+
+	if zone_configs.is_empty():
+		zones_assigned.emit()
+		return
+
+	var room_graph: Dictionary = _build_room_graph()
+	var entrance_pos: Vector2i = placed_rooms[0].position if not placed_rooms.is_empty() else Vector2i.ZERO
+	var rooms_by_distance: Array[Vector2i] = _bfs_rooms_by_distance(entrance_pos, room_graph)
+
+	# Build position -> PlacedRoom lookup
+	var pos_to_room: Dictionary = {}
+	for pl in placed_rooms:
+		pos_to_room[pl.position] = pl
+
+	# Track which positions have been assigned to a non-default zone
+	var assigned_to_zone: Dictionary = {}  # position -> zone_id
+
+	# Assign each configured zone
+	for config_idx in range(zone_configs.size()):
+		var config: ZoneConfig = zone_configs[config_idx]
+		var zone_id: int = config_idx + 1  # Zone 0 is default
+
+		# Find seed room: farthest unassigned room from entrance
+		var seed_pos: Variant = _find_zone_seed(rooms_by_distance, assigned_to_zone, pos_to_room)
+		if seed_pos == null:
+			push_warning("DungeonGenerator: Could not find seed for zone '%s'" % config.zone_name)
+			continue
+
+		# BFS-grow from seed into unassigned rooms
+		var zone_rooms: Array[Vector2i] = _grow_zone(seed_pos as Vector2i, config.target_room_count, assigned_to_zone, room_graph)
+
+		for pos in zone_rooms:
+			assigned_to_zone[pos] = zone_id
+			if pos_to_room.has(pos):
+				(pos_to_room[pos] as PlacedRoom).zone = zone_id
+
+	# Detect transition rooms (rooms bordering a different zone)
+	_detect_transitions(pos_to_room, room_graph)
+
+	zones_assigned.emit()
+
+	# Print summary
+	var zone_counts: Dictionary = {}
+	var transition_count: int = 0
+	for pl in placed_rooms:
+		zone_counts[pl.zone] = zone_counts.get(pl.zone, 0) + 1
+		if pl.is_transition:
+			transition_count += 1
+	print("DungeonGenerator: Zones assigned — %s, transitions: %d" % [zone_counts, transition_count])
+
+
+## Finds a seed room for a new zone: the farthest unassigned, non-connection room
+## from the entrance that is not ENTRANCE or BOSS.
+## Returns the room position or null if no suitable room is found.
+func _find_zone_seed(rooms_by_distance: Array[Vector2i], assigned: Dictionary, pos_to_room: Dictionary) -> Variant:
+	# Walk from farthest to nearest
+	for i in range(rooms_by_distance.size() - 1, -1, -1):
+		var pos: Vector2i = rooms_by_distance[i]
+		if assigned.has(pos):
+			continue
+		if not pos_to_room.has(pos):
+			continue
+		var pl: PlacedRoom = pos_to_room[pos] as PlacedRoom
+		if pl.room_type == RoomType.ENTRANCE or pl.room_type == RoomType.BOSS:
+			continue
+		if pl.room.is_connection_room():
+			continue
+		return pos
+	return null
+
+
+## BFS-grows a zone from a seed position into adjacent unassigned rooms.
+## Returns the list of positions assigned to the zone (up to target_count).
+func _grow_zone(seed_pos: Vector2i, target_count: int, assigned: Dictionary, room_graph: Dictionary) -> Array[Vector2i]:
+	var result: Array[Vector2i] = []
+	var visited: Dictionary = {}
+	var queue: Array[Vector2i] = [seed_pos]
+	visited[seed_pos] = true
+
+	while not queue.is_empty() and result.size() < target_count:
+		var pos: Vector2i = queue.pop_front()
+		if assigned.has(pos):
+			continue
+		result.append(pos)
+
+		if room_graph.has(pos):
+			for neighbor: Vector2i in (room_graph[pos] as Dictionary).keys():
+				if not visited.has(neighbor) and not assigned.has(neighbor):
+					visited[neighbor] = true
+					queue.append(neighbor)
+
+	return result
+
+
+## Detects transition rooms: rooms that have at least one graph-neighbor in a different zone.
+func _detect_transitions(pos_to_room: Dictionary, room_graph: Dictionary) -> void:
+	for pl in placed_rooms:
+		if not room_graph.has(pl.position):
+			continue
+		for neighbor_pos: Vector2i in (room_graph[pl.position] as Dictionary).keys():
+			if pos_to_room.has(neighbor_pos):
+				var neighbor: PlacedRoom = pos_to_room[neighbor_pos] as PlacedRoom
+				if neighbor.zone != pl.zone:
+					pl.is_transition = true
+					break
+
+
+## Returns the display name for a zone ID.
+## Zone 0 returns "DEFAULT"; configured zones return their zone_name.
+func get_zone_name(zone_id: int) -> String:
+	if zone_id == 0:
+		return "DEFAULT"
+	var config_idx: int = zone_id - 1
+	if config_idx >= 0 and config_idx < zone_configs.size():
+		return zone_configs[config_idx].zone_name
+	return "UNKNOWN"
+
+
+## Returns the display color for a zone ID.
+## Zone 0 returns white (no tint); configured zones return their configured color.
+func get_zone_color(zone_id: int) -> Color:
+	if zone_id == 0:
+		return Color.WHITE
+	var config_idx: int = zone_id - 1
+	if config_idx >= 0 and config_idx < zone_configs.size():
+		return zone_configs[config_idx].color
 	return Color.WHITE
 
 

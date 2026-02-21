@@ -58,6 +58,7 @@ func _ready() -> void:
 	generator.generation_step.connect(_on_generation_step)
 	generator.passages_resolved.connect(_on_passages_resolved)
 	generator.room_types_assigned.connect(_on_room_types_assigned)
+	generator.zones_assigned.connect(_on_zones_assigned)
 	
 	# Connect toggle all button
 	var toggle_all_button = get_node_or_null("../CanvasLayer/WalkerSelectionPanel/MarginContainer/VBoxContainer/ToggleAllButton")
@@ -136,6 +137,10 @@ func _on_passages_resolved(opened: int, blocked: int) -> void:
 
 
 func _on_room_types_assigned() -> void:
+	queue_redraw()
+
+
+func _on_zones_assigned() -> void:
 	queue_redraw()
 
 
@@ -544,8 +549,17 @@ func _draw_room(placement: DungeonGenerator.PlacedRoom, offset: Vector2) -> void
 				var type_color = DungeonGenerator.get_room_type_color(placement.room_type)
 				color = color.lerp(type_color, 0.35)
 			
+			# Tint floor cells with zone color
+			if cell.cell_type == MetaCell.CellType.FLOOR and placement.zone != 0:
+				var zone_color = generator.get_zone_color(placement.zone)
+				color = color.lerp(zone_color, 0.25)
+			
 			# Draw cell rectangle
 			draw_rect(Rect2(screen_pos, Vector2(cell_size, cell_size)), color, true)
+			
+			# Draw transition border for transition rooms
+			if placement.is_transition and cell.cell_type == MetaCell.CellType.FLOOR:
+				draw_rect(Rect2(screen_pos, Vector2(cell_size, cell_size)), Color(1.0, 1.0, 0.0, 0.4), false, 2.0)
 			
 			# Draw grid lines
 			if draw_grid:
@@ -558,6 +572,10 @@ func _draw_room(placement: DungeonGenerator.PlacedRoom, offset: Vector2) -> void
 	# Draw room type label at room center
 	if placement.room_type != DungeonGenerator.RoomType.NONE:
 		_draw_room_type_label(placement, offset)
+	
+	# Draw zone label below room type label (or at center if no room type)
+	if placement.zone != 0 or placement.is_transition:
+		_draw_zone_label(placement, offset)
 
 
 func _draw_cell_connections(cell: MetaCell, screen_pos: Vector2) -> void:
@@ -603,6 +621,43 @@ func _draw_room_type_label(placement: DungeonGenerator.PlacedRoom, offset: Vecto
 	draw_string(font, text_pos, type_name, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size, type_color)
 
 
+## Draw a zone label below the room type label (or at center if no room type label)
+func _draw_zone_label(placement: DungeonGenerator.PlacedRoom, offset: Vector2) -> void:
+	var room_center = _get_room_center_grid_pos(placement.position, placement.room)
+	var center_pos = room_center * cell_size + offset
+	
+	# Offset below the room type label if one exists
+	if placement.room_type != DungeonGenerator.RoomType.NONE:
+		center_pos.y += 16
+	
+	var zone_name = generator.get_zone_name(placement.zone)
+	var zone_color = generator.get_zone_color(placement.zone)
+	
+	# Build label text
+	var label_text = zone_name
+	if placement.is_transition:
+		label_text += " [T]"
+		zone_color = Color(1.0, 1.0, 0.0)  # Yellow for transitions
+	
+	var font = ThemeDB.fallback_font
+	var font_size = 9
+	var text_size = font.get_string_size(label_text, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size)
+	
+	# Draw background pill
+	var padding = Vector2(4, 3)
+	var bg_rect = Rect2(
+		center_pos - text_size * 0.5 - padding,
+		text_size + padding * 2
+	)
+	var bg_color = Color(0, 0, 0, 0.7)
+	draw_rect(bg_rect, bg_color, true)
+	draw_rect(bg_rect, zone_color, false, 1.5)
+	
+	# Draw text
+	var text_pos = center_pos - Vector2(text_size.x * 0.5, -font_size * TEXT_VERTICAL_OFFSET_FACTOR)
+	draw_string(font, text_pos, label_text, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size, zone_color)
+
+
 func _draw_statistics(bounds: Rect2i) -> void:
 	var stats_pos = Vector2(10, 30)
 	var line_height = 20
@@ -645,6 +700,41 @@ func _draw_statistics(bounds: Rect2i) -> void:
 				var text = "%s: %d" % [name, type_counts[rtype]]
 				draw_string(font, Vector2(stats_pos.x, type_y), text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
 				type_y += line_height
+	
+	# Draw zone counts below room type counts
+	if not generator.zone_configs.is_empty():
+		var zone_counts: Dictionary = {}
+		var transition_count: int = 0
+		for pl in generator.placed_rooms:
+			zone_counts[pl.zone] = zone_counts.get(pl.zone, 0) + 1
+			if pl.is_transition:
+				transition_count += 1
+		
+		var zone_y: float
+		if not type_counts.is_empty():
+			zone_y = stats_pos.y + stats.size() * line_height + 5 + type_counts.size() * line_height + 5
+		else:
+			zone_y = stats_pos.y + stats.size() * line_height + 5
+		
+		draw_string(font, Vector2(stats_pos.x, zone_y), "-- Zones --", HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color.GRAY)
+		zone_y += line_height
+		
+		# Default zone
+		var default_count: int = zone_counts.get(0, 0)
+		draw_string(font, Vector2(stats_pos.x, zone_y), "DEFAULT: %d" % default_count, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color.WHITE)
+		zone_y += line_height
+		
+		# Configured zones
+		for config_idx in range(generator.zone_configs.size()):
+			var zone_id: int = config_idx + 1
+			var config: ZoneConfig = generator.zone_configs[config_idx]
+			var count: int = zone_counts.get(zone_id, 0)
+			var text = "%s: %d/%d" % [config.zone_name, count, config.target_room_count]
+			draw_string(font, Vector2(stats_pos.x, zone_y), text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, config.color)
+			zone_y += line_height
+		
+		draw_string(font, Vector2(stats_pos.x, zone_y), "Transitions: %d" % transition_count, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(1.0, 1.0, 0.0))
+		zone_y += line_height
 
 
 func _input(event: InputEvent) -> void:

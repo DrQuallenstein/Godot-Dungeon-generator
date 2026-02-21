@@ -27,6 +27,7 @@ compactness_bias = 0.65
 event_room_count = 3
 chest_room_count = 2
 merchant_room_count = 1
+min_chest_merchant_distance = 4
 
 [node name="DungeonVisualizer" type="Node2D" parent="." unique_id=1074786944]
 script = ExtResource("6")

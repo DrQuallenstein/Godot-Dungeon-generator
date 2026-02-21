@@ -141,6 +141,10 @@ class RequiredRoomLink:
 ## Number of MERCHANT rooms to assign during generation
 @export_range(0, 50) var merchant_room_count: int = 1
 
+## Minimum BFS distance from entrance for CHEST and MERCHANT rooms.
+## These room types will only be placed at least this many rooms away from the entrance.
+@export_range(0, 20) var min_chest_merchant_distance: int = 4
+
 ## Maximum recursion depth when validating required connections
 ## Limits how many chained required connections can be validated
 ## Higher values allow more complex room chains but may impact performance
@@ -1010,6 +1014,9 @@ func _place_boss_room() -> void:
 ## Assigns room types (ENTRANCE, BOSS, EVENT, CHEST, MERCHANT) to placed rooms.
 ## Called after passage resolution and boss room placement.
 ## Uses BFS distance from entrance to distribute special rooms across the dungeon.
+## CHEST and MERCHANT rooms are placed at the periphery (high BFS distance),
+## at least min_chest_merchant_distance from the entrance, and not graph-adjacent
+## to each other for better distribution.
 func _assign_room_types() -> void:
 	# Reset all room types
 	for pl in placed_rooms:
@@ -1041,68 +1048,114 @@ func _assign_room_types() -> void:
 	var entrance_pos: Vector2i = placed_rooms[0].position
 	var rooms_by_distance: Array[Vector2i] = _bfs_rooms_by_distance(entrance_pos, room_graph)
 
-	# Build position -> BFS index lookup
+	# Build position -> BFS distance lookup
 	var distance_map: Dictionary = {}
 	for i in range(rooms_by_distance.size()):
 		distance_map[rooms_by_distance[i]] = i
 
-	# Sort eligible rooms by BFS distance (ascending)
-	eligible.sort_custom(func(a: PlacedRoom, b: PlacedRoom) -> bool:
+	# --- Phase 1: Assign CHEST and MERCHANT (periphery, min distance, well-distributed) ---
+	# Filter eligible rooms that meet the minimum distance requirement
+	var periphery_eligible: Array[PlacedRoom] = []
+	for pl in eligible:
+		var dist: int = distance_map.get(pl.position, 0)
+		if dist >= min_chest_merchant_distance:
+			periphery_eligible.append(pl)
+
+	# Sort by BFS distance descending (farthest rooms first = edges)
+	periphery_eligible.sort_custom(func(a: PlacedRoom, b: PlacedRoom) -> bool:
+		var da: int = distance_map.get(a.position, 0)
+		var db: int = distance_map.get(b.position, 0)
+		return da > db
+	)
+
+	# Fallback: if not enough periphery rooms, relax the distance constraint
+	if periphery_eligible.size() < chest_room_count + merchant_room_count:
+		push_warning("DungeonGenerator: Not enough rooms at distance >= %d for CHEST/MERCHANT. Using all eligible rooms." % min_chest_merchant_distance)
+		periphery_eligible = eligible.duplicate()
+		periphery_eligible.sort_custom(func(a: PlacedRoom, b: PlacedRoom) -> bool:
+			var da: int = distance_map.get(a.position, 0)
+			var db: int = distance_map.get(b.position, 0)
+			return da > db
+		)
+
+	# Place CHEST and MERCHANT from periphery, ensuring no two are graph-adjacent
+	var assigned_positions: Dictionary = {}  # position -> true (for adjacency checks)
+	var periphery_used: Dictionary = {}  # index in periphery_eligible -> true
+
+	# Interleave CHEST and MERCHANT to spread them better
+	var chest_merchant_requests: Array = []
+	for _i in range(chest_room_count):
+		chest_merchant_requests.append(RoomType.CHEST)
+	for _i in range(merchant_room_count):
+		chest_merchant_requests.append(RoomType.MERCHANT)
+
+	for rtype in chest_merchant_requests:
+		var placed: bool = false
+		for idx in range(periphery_eligible.size()):
+			if periphery_used.has(idx):
+				continue
+			var candidate: PlacedRoom = periphery_eligible[idx]
+			# Check that no already-assigned CHEST/MERCHANT is a graph neighbor
+			if _is_adjacent_to_assigned(candidate.position, assigned_positions, room_graph):
+				continue
+			candidate.room_type = rtype
+			assigned_positions[candidate.position] = true
+			periphery_used[idx] = true
+			placed = true
+			break
+		if not placed:
+			# Relax adjacency constraint if we couldn't find a non-adjacent room
+			for idx in range(periphery_eligible.size()):
+				if periphery_used.has(idx):
+					continue
+				periphery_eligible[idx].room_type = rtype
+				assigned_positions[periphery_eligible[idx].position] = true
+				periphery_used[idx] = true
+				placed = true
+				break
+		if not placed:
+			push_warning("DungeonGenerator: Could not place room of type %s" % get_room_type_name(rtype))
+
+	# --- Phase 2: Assign EVENT rooms (spread across full dungeon, no distance constraint) ---
+	# Re-collect eligible rooms that haven't been assigned yet
+	var event_eligible: Array[PlacedRoom] = []
+	for pl in eligible:
+		if pl.room_type == RoomType.NONE:
+			event_eligible.append(pl)
+
+	# Sort by BFS distance ascending for even distribution
+	event_eligible.sort_custom(func(a: PlacedRoom, b: PlacedRoom) -> bool:
 		var da: int = distance_map.get(a.position, 0)
 		var db: int = distance_map.get(b.position, 0)
 		return da < db
 	)
 
-	# Distribute room types using spaced intervals across the distance-sorted list
-	var type_requests: Array = []  # [RoomType, count]
-	if event_room_count > 0:
-		type_requests.append([RoomType.EVENT, event_room_count])
-	if chest_room_count > 0:
-		type_requests.append([RoomType.CHEST, chest_room_count])
-	if merchant_room_count > 0:
-		type_requests.append([RoomType.MERCHANT, merchant_room_count])
+	# Distribute EVENT rooms evenly across the eligible list
+	var event_placed: int = 0
+	var event_assigned_indices: Dictionary = {}
+	for j in range(event_room_count):
+		if event_assigned_indices.size() >= event_eligible.size():
+			break
+		var target_idx: int = 0
+		if event_room_count == 1:
+			target_idx = event_eligible.size() / 2
+		else:
+			target_idx = int(float(j) / float(event_room_count) * float(event_eligible.size()))
+		var best_idx: int = -1
+		var best_dist: int = event_eligible.size() + 1
+		for k in range(event_eligible.size()):
+			if not event_assigned_indices.has(k):
+				var dist_to_target: int = absi(k - target_idx)
+				if dist_to_target < best_dist:
+					best_dist = dist_to_target
+					best_idx = k
+		if best_idx >= 0:
+			event_eligible[best_idx].room_type = RoomType.EVENT
+			event_assigned_indices[best_idx] = true
+			event_placed += 1
 
-	var total_requested: int = 0
-	for req in type_requests:
-		total_requested += req[1]
-
-	# Clamp to available rooms
-	if total_requested > eligible.size():
-		push_warning("DungeonGenerator: Not enough eligible rooms (%d) for requested room types (%d). Reducing counts." % [eligible.size(), total_requested])
-
-	# Assign types by taking evenly spaced rooms from the sorted list
-	var assigned_indices: Dictionary = {}  # index -> true
-	for req in type_requests:
-		var rtype: int = req[0]
-		var count: int = req[1]
-		var placed_count: int = 0
-
-		# Find unassigned rooms evenly spaced across the eligible list
-		for j in range(count):
-			if assigned_indices.size() >= eligible.size():
-				break
-			# Target position: spread evenly across the list
-			var target_idx: int = 0
-			if count == 1:
-				target_idx = eligible.size() / 2
-			else:
-				target_idx = int(float(j) / float(count) * float(eligible.size()))
-			# Find the nearest unassigned index
-			var best_idx: int = -1
-			var best_dist: int = eligible.size() + 1
-			for k in range(eligible.size()):
-				if not assigned_indices.has(k):
-					var dist_to_target: int = absi(k - target_idx)
-					if dist_to_target < best_dist:
-						best_dist = dist_to_target
-						best_idx = k
-			if best_idx >= 0:
-				eligible[best_idx].room_type = rtype
-				assigned_indices[best_idx] = true
-				placed_count += 1
-
-		if placed_count < count:
-			push_warning("DungeonGenerator: Could only assign %d/%d rooms of type %d" % [placed_count, count, rtype])
+	if event_placed < event_room_count:
+		push_warning("DungeonGenerator: Could only assign %d/%d EVENT rooms" % [event_placed, event_room_count])
 
 	room_types_assigned.emit()
 
@@ -1112,6 +1165,16 @@ func _assign_room_types() -> void:
 		if pl.room_type != RoomType.NONE:
 			type_counts[pl.room_type] = type_counts.get(pl.room_type, 0) + 1
 	print("DungeonGenerator: Room types assigned — ", type_counts)
+
+
+## Checks whether a room position is graph-adjacent to any already-assigned position
+func _is_adjacent_to_assigned(pos: Vector2i, assigned: Dictionary, room_graph: Dictionary) -> bool:
+	if not room_graph.has(pos):
+		return false
+	for neighbor: Vector2i in (room_graph[pos] as Dictionary).keys():
+		if assigned.has(neighbor):
+			return true
+	return false
 
 
 ## Returns the display name for a RoomType enum value

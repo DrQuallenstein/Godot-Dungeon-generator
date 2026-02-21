@@ -24,6 +24,9 @@ max_rooms_per_walker = 100
 target_meta_cell_count = 380
 enable_visualization = true
 compactness_bias = 0.65
+event_room_count = 3
+chest_room_count = 2
+merchant_room_count = 1
 
 [node name="DungeonVisualizer" type="Node2D" parent="." unique_id=1074786944]
 script = ExtResource("6")

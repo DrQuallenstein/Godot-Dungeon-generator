@@ -5,18 +5,30 @@ extends Node
 ## Multiple walkers independently place rooms until a target cell count is reached.
 ## This creates more organic, interconnected dungeons with loops.
 
+## Room type enum for assigning a gameplay purpose to each room
+enum RoomType {
+	NONE = 0,
+	ENTRANCE = 1,
+	BOSS = 2,
+	EVENT = 3,
+	CHEST = 4,
+	MERCHANT = 5
+}
+
 ## Placed room data structure
 class PlacedRoom:
 	var room: MetaRoom
 	var position: Vector2i  # World position (in cells)
 	var rotation: RoomRotator.Rotation
 	var original_template: MetaRoom  # Reference to the original template before cloning/rotation
+	var room_type: int = 0  # RoomType enum value (NONE by default)
 	
 	func _init(p_room: MetaRoom, p_position: Vector2i, p_rotation: RoomRotator.Rotation, p_original_template: MetaRoom):
 		room = p_room
 		position = p_position
 		rotation = p_rotation
 		original_template = p_original_template
+		room_type = 0  # RoomType.NONE
 	
 	## Gets the world position of a cell in this room
 	func get_cell_world_pos(local_x: int, local_y: int) -> Vector2i:
@@ -120,6 +132,15 @@ class RequiredRoomLink:
 ## Example: depth 2 → chain of 3 rooms (entrance + 2 further rooms) required on each side.
 @export_range(1, 10) var min_loop_dead_end_depth: int = 2
 
+## Number of EVENT rooms to assign during generation
+@export_range(0, 50) var event_room_count: int = 3
+
+## Number of CHEST rooms to assign during generation
+@export_range(0, 50) var chest_room_count: int = 2
+
+## Number of MERCHANT rooms to assign during generation
+@export_range(0, 50) var merchant_room_count: int = 1
+
 ## Maximum recursion depth when validating required connections
 ## Limits how many chained required connections can be validated
 ## Higher values allow more complex room chains but may impact performance
@@ -173,6 +194,9 @@ signal generation_step(iteration: int, total_cells: int)
 ## Signal emitted when the boss room is placed after generation
 ## Parameters: placement (PlacedRoom)
 signal boss_room_placed(placement: PlacedRoom)
+
+## Signal emitted after room types have been assigned
+signal room_types_assigned()
 
 
 ## Generates the dungeon using multi-walker algorithm
@@ -268,6 +292,9 @@ func generate() -> bool:
 	# Place boss room at the farthest point from the entrance
 	if boss_room_template != null:
 		_place_boss_room()
+	
+	# Assign room types (ENTRANCE, BOSS, EVENT, CHEST, MERCHANT)
+	_assign_room_types()
 	
 	generation_complete.emit(success, placed_rooms.size(), cell_count)
 	
@@ -974,6 +1001,151 @@ func _place_boss_room() -> void:
 					return
 
 	push_warning("DungeonGenerator: Could not place boss room — no suitable connection found")
+
+
+# ---------------------------------------------------------------------------
+# Room type assignment
+# ---------------------------------------------------------------------------
+
+## Assigns room types (ENTRANCE, BOSS, EVENT, CHEST, MERCHANT) to placed rooms.
+## Called after passage resolution and boss room placement.
+## Uses BFS distance from entrance to distribute special rooms across the dungeon.
+func _assign_room_types() -> void:
+	# Reset all room types
+	for pl in placed_rooms:
+		pl.room_type = RoomType.NONE
+
+	# Assign ENTRANCE to first room
+	if not placed_rooms.is_empty():
+		placed_rooms[0].room_type = RoomType.ENTRANCE
+
+	# Assign BOSS to boss room
+	if boss_room != null:
+		boss_room.room_type = RoomType.BOSS
+
+	# Collect eligible rooms (not ENTRANCE, not BOSS, not connection rooms)
+	var eligible: Array[PlacedRoom] = []
+	for pl in placed_rooms:
+		if pl.room_type != RoomType.NONE:
+			continue
+		if pl.room.is_connection_room():
+			continue
+		eligible.append(pl)
+
+	if eligible.is_empty():
+		room_types_assigned.emit()
+		return
+
+	# Use BFS distance to spread special rooms across the dungeon
+	var room_graph: Dictionary = _build_room_graph()
+	var entrance_pos: Vector2i = placed_rooms[0].position
+	var rooms_by_distance: Array[Vector2i] = _bfs_rooms_by_distance(entrance_pos, room_graph)
+
+	# Build position -> BFS index lookup
+	var distance_map: Dictionary = {}
+	for i in range(rooms_by_distance.size()):
+		distance_map[rooms_by_distance[i]] = i
+
+	# Sort eligible rooms by BFS distance (ascending)
+	eligible.sort_custom(func(a: PlacedRoom, b: PlacedRoom) -> bool:
+		var da: int = distance_map.get(a.position, 0)
+		var db: int = distance_map.get(b.position, 0)
+		return da < db
+	)
+
+	# Distribute room types using spaced intervals across the distance-sorted list
+	var type_requests: Array = []  # [RoomType, count]
+	if event_room_count > 0:
+		type_requests.append([RoomType.EVENT, event_room_count])
+	if chest_room_count > 0:
+		type_requests.append([RoomType.CHEST, chest_room_count])
+	if merchant_room_count > 0:
+		type_requests.append([RoomType.MERCHANT, merchant_room_count])
+
+	var total_requested: int = 0
+	for req in type_requests:
+		total_requested += req[1]
+
+	# Clamp to available rooms
+	if total_requested > eligible.size():
+		push_warning("DungeonGenerator: Not enough eligible rooms (%d) for requested room types (%d). Reducing counts." % [eligible.size(), total_requested])
+
+	# Assign types by taking evenly spaced rooms from the sorted list
+	var assigned_indices: Dictionary = {}  # index -> true
+	for req in type_requests:
+		var rtype: int = req[0]
+		var count: int = req[1]
+		var placed_count: int = 0
+
+		# Find unassigned rooms evenly spaced across the eligible list
+		for j in range(count):
+			if assigned_indices.size() >= eligible.size():
+				break
+			# Target position: spread evenly across the list
+			var target_idx: int = 0
+			if count <= 1:
+				target_idx = eligible.size() / 2
+			else:
+				target_idx = int(float(j) / float(count) * float(eligible.size()))
+			# Find the nearest unassigned index
+			var best_idx: int = -1
+			var best_dist: int = eligible.size() + 1
+			for k in range(eligible.size()):
+				if not assigned_indices.has(k):
+					var d: int = absi(k - target_idx)
+					if d < best_dist:
+						best_dist = d
+						best_idx = k
+			if best_idx >= 0:
+				eligible[best_idx].room_type = rtype
+				assigned_indices[best_idx] = true
+				placed_count += 1
+
+		if placed_count < count:
+			push_warning("DungeonGenerator: Could only assign %d/%d rooms of type %d" % [placed_count, count, rtype])
+
+	room_types_assigned.emit()
+
+	# Print summary
+	var type_counts: Dictionary = {}
+	for pl in placed_rooms:
+		if pl.room_type != RoomType.NONE:
+			type_counts[pl.room_type] = type_counts.get(pl.room_type, 0) + 1
+	print("DungeonGenerator: Room types assigned — ", type_counts)
+
+
+## Returns the display name for a RoomType enum value
+static func get_room_type_name(rtype: int) -> String:
+	match rtype:
+		RoomType.NONE:
+			return "NONE"
+		RoomType.ENTRANCE:
+			return "ENTRANCE"
+		RoomType.BOSS:
+			return "BOSS"
+		RoomType.EVENT:
+			return "EVENT"
+		RoomType.CHEST:
+			return "CHEST"
+		RoomType.MERCHANT:
+			return "MERCHANT"
+	return "UNKNOWN"
+
+
+## Returns the display color for a RoomType enum value
+static func get_room_type_color(rtype: int) -> Color:
+	match rtype:
+		RoomType.ENTRANCE:
+			return Color(0.2, 0.6, 1.0)   # Blue
+		RoomType.BOSS:
+			return Color(1.0, 0.15, 0.15)  # Red
+		RoomType.EVENT:
+			return Color(1.0, 0.85, 0.0)   # Yellow
+		RoomType.CHEST:
+			return Color(1.0, 0.65, 0.0)   # Orange
+		RoomType.MERCHANT:
+			return Color(0.4, 0.9, 0.4)    # Green
+	return Color.WHITE
 
 
 ## BFS traversal from a starting room position through the room graph.

@@ -16,6 +16,7 @@
 
 [node name="DungeonGenerator" type="Node" parent="." unique_id=1563054712]
 script = ExtResource("1")
+entrance_room_template = ExtResource("7_u7w57")
 boss_room_template = ExtResource("2_us072")
 room_templates = Array[ExtResource("2_b1d4m")]([ExtResource("5"), ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("7_u7w57"), ExtResource("8_us072")])
 generation_seed = 2673167376

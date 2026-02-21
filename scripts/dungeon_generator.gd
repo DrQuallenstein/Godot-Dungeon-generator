@@ -88,6 +88,9 @@ class RequiredRoomLink:
 		needs_placement = p_needs_placement
 
 ## Boss room template to place at the farthest point from the entrance
+@export var entrance_room_template: MetaRoom = null
+
+## Boss room template to place at the farthest point from the entrance
 @export var boss_room_template: MetaRoom = null
 
 ## Available room templates to use for generation
@@ -230,15 +233,13 @@ func generate() -> bool:
 		push_error("DungeonGenerator: target_meta_cell_count must be greater than 0")
 		return false
 	
-	# Find a suitable starting room (one with connections)
-	var start_room = _get_random_room_with_connections()
-	if start_room == null:
+	if entrance_room_template == null:
 		push_error("DungeonGenerator: No rooms with connections found")
 		return false
 	
 	# Place the first room at origin (clone it to avoid modifying the template)
-	var first_room_clone = start_room.clone()
-	var first_placement = PlacedRoom.new(first_room_clone, Vector2i.ZERO, RoomRotator.Rotation.DEG_0, start_room)
+	var first_room_clone = entrance_room_template.clone()
+	var first_placement = PlacedRoom.new(first_room_clone, Vector2i.ZERO, RoomRotator.Rotation.DEG_0, entrance_room_template)
 	_place_room(first_placement)
 	
 	# Initialize walkers at the first room
